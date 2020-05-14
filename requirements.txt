@@ -1,0 +1,11 @@
+pandas
+pytz==2018.7
+requests==2.21.0
+ibm-cloud-sdk-core==0.3.0
+ibm-watson==3.0.3
+mysql-connector-python==8.0.16
+tldextract==2.2.1
+jwt
+PyJWT==1.7.1
+boto3
+
