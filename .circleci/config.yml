@@ -13,7 +13,7 @@ jobs:
     executor: python/default
     steps:
 
-      - run: echo  'here is the param value << parameters.stage >> '
+      - run: echo  '--template template.yaml --parameters-override AppStage=<<parameters.stage>> '
 
       # - checkout
       # - python/load-cache
