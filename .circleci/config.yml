@@ -14,7 +14,7 @@ jobs:
     steps:
 
       - run: echo  '--template template.yaml --parameters-override AppStage=<<parameters.stage>> '
-      - run: echo ' $'${CIRCLE_BRANCH}''
+      - run: echo ' '${CIRCLE_BRANCH}'_USERPATH'
 
       # - checkout
       # - python/load-cache
