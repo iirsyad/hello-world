@@ -13,7 +13,7 @@ jobs:
     executor: python/default
     steps:
 
-      - run: echo << parameters.stage >>
+      - run: echo  'here is the param value << parameters.stage >> '
 
       # - checkout
       # - python/load-cache
