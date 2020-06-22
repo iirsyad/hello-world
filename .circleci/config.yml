@@ -60,6 +60,7 @@ jobs:
           command: |
             public_ip_address=$(wget -qO- http://checkip.amazonaws.com)
             echo "this computers public ip address is $public_ip_address"
+            aws ec2 authorize-security-group-ingress --region us-west-2 --group-id sg-04ee700a973f11ef4 --ip-permissions "[{\"IpProtocol\": \"tcp\", \"FromPort\": 	3306, \"ToPort\": 	3306, \"IpRanges\": [{\"CidrIp\": \"${public_ip_address}/32\"}]}]"
 
       # - run: echo $(wget -qO- http://checkip.amazonaws.com)
       - run: aws --version
@@ -73,9 +74,9 @@ jobs:
       #     name: Wait for db
       #     command: dockerize -wait tcp://localhost:3306 -timeout 1m
 
-      # - run:
-      #     name: Mysql database
-      #     command: mysql  -h blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com -u blueoceansa -pSecur3!! -e "create database mate;"
+      - run:
+          name: Mysql database
+          command: mysql  -h blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com -u blueoceansa -pSecur3!! -e "create database mate;"
 
       # - run: 
       #     command: |
