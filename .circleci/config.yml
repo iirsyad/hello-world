@@ -26,8 +26,7 @@ jobs:
         environment:
           MYSQL_USER: root
           MYSQL_ALLOW_EMPTY_PASSWORD: true
-          MYSQL_PASSWORD: 
-          
+
     working_directory: ~/repo
 
     steps:
@@ -49,7 +48,7 @@ jobs:
 
       - run:
           name: Mysql database
-          command: mysql  -h 127.0.0.1 -u root  -e "create database mate;"
+          command: mysql  -h 127.0.0.1 -u root -e "create database mate;"
 
       - setup_remote_docker
 
