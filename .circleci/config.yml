@@ -49,7 +49,7 @@ jobs:
       # - run: sudo apt install make
       - run: sudo wget -qO- https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/6.4.4/flyway-commandline-6.4.4-linux-x64.tar.gz | tar xvz && sudo ln -s `pwd`/flyway-6.4.4/flyway /usr/local/bin 
       # - run: sudo sh -c 'echo "docker run --rm flyway/flyway:6.4.4 $*" > /usr/local/bin/flyway && chmod +x /usr/local/bin/flyway'
-
+      - run: sudo apt-get install awscli
       # 
       - run: 
           command: |
@@ -57,7 +57,7 @@ jobs:
             pwd
 
       - run: echo $(wget -qO- http://checkip.amazonaws.com)
-      - run: aws help
+      - run: aws --version
 
       # - run:
       #     name: install dockerize
