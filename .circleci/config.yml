@@ -15,10 +15,11 @@ jobs:
 
       - run: echo  '--template template.yaml --parameters-override AppStage=<<parameters.stage>> '
       - run: echo ' '${CIRCLE_BRANCH}'_USERPATH'
-      - run:
-          command: |
-            set -x
-            docker-compose up -d
+      - run: dir .
+      # - run:
+      #     command: |
+      #       set -x
+      #       docker-compose up -d
 
 
       # - checkout
