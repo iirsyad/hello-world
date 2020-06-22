@@ -32,7 +32,7 @@ jobs:
 
       - run: sudo apt install -y libsqlite3-dev zlib1g-dev
       # - run: sudo docker-python-ext-install zip
-      - run: sudo composer self-update
+      # - run: sudo composer self-update
 
       - run:
           name: Mysql database
