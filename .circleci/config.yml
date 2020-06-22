@@ -71,12 +71,16 @@ jobs:
 
       - run: 
           command: |
-            flyway -url=jdbc:mysql://localhost:3306 -schemas=mate -locations=filesystem:/home/circleci/repo/flyway_scripts/src -user=root migrate  
+            flyway -url=jdbc:mysql://localhost:3306 -schemas=mate -locations=filesystem:./flyway_scripts/src -user=root migrate  
 
 
       - run: 
           command: |
             flyway -url=jdbc:mysql://localhost:3306 -schemas=mate -user=root info  
+
+      - run:
+          command: mysql  -h 127.0.0.1 -u root  -e "use mate; select * from AccountLevel;"
+            
 
       # - setup_remote_docker
 
