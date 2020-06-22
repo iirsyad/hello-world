@@ -27,7 +27,7 @@ jobs:
       #     MYSQL_USER: root
       #     MYSQL_ALLOW_EMPTY_PASSWORD: true
 
-      # - image: boxfuse/flyway:latest
+      - image: boxfuse/flyway:latest
         # command: -url=jdbc:mysql://localhost:3306 -schemas=mate -user=root  -connectRetries=10 migrate
 
     working_directory: ~/repo
