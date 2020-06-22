@@ -26,7 +26,19 @@ jobs:
       - run:
           command: |
             set -x
-            docker-compose up
+            docker-compose up -d
+
+      
+       - run:
+          name: Waiting for dockers to be ready
+          command: |
+            for i in `seq 1 60`;
+            do
+              nc -z localhost 3306 && echo Success && exit 0
+              echo -n .
+              sleep 1
+            done
+            echo Failed waiting for dockers && exit 1
 
 
       # - checkout

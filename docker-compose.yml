@@ -14,6 +14,6 @@ services:
     container_name: flyway_migration_3
     volumes:
       - ./flyway_scripts/src:/flyway/sql
-    command: -url=jdbc:mysql://localhost:3306 -schemas=aidentity3 -user=root -password=Betawi45! -connectRetries=30 migrate
+    command: -url=jdbc:mysql://my_sql_db:3306 -schemas=aidentity3 -user=root -password=Betawi45! -connectRetries=30 migrate
     depends_on:
     - my_sql_db
