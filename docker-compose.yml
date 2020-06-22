@@ -6,4 +6,4 @@ services:
     container_name: flyway_migration_3
     volumes:
       - ./flyway_scripts/src:/flyway/sql
-    command: -url=jdbc:mysql://127.0.0.1:3306 -schemas=aidentity3 -user=root  -connectRetries=30 migrate
+    command: -url=jdbc:mysql://host.docker.internal:3306 -schemas=mate -user=root  -connectRetries=10 migrate
