@@ -1,19 +1,9 @@
 version: '3'
 services:
-  my_sql_db:
-    image: percona:latest
-    container_name: my_sql_db_3
-    environment:
-      MYSQL_ROOT_PASSWORD: Betawi45!
-      MYSQL_DATABASE: aidentity3
-    ports:
-    - 3306:3306
 
   migration:
     image: boxfuse/flyway:latest
     container_name: flyway_migration_3
     volumes:
       - ./flyway_scripts/src:/flyway/sql
-    command: -url=jdbc:mysql://my_sql_db:3306 -schemas=aidentity3 -user=root -password=Betawi45! -connectRetries=30 migrate
-    depends_on:
-    - my_sql_db
+    command: -url=jdbc:mysql://127.0.0.1:3306 -schemas=aidentity3 -user=root -password=Betawi45! -connectRetries=30 migrate
