@@ -5,7 +5,12 @@ orbs:
   
 
 jobs:
+
   build-and-test:
+    parameters:
+      stage:
+        type: string   
+
     parameters:
       stage:
         type: string
@@ -21,14 +26,84 @@ jobs:
           MYSQL_PASSWORD:
     
       # - image: mysql:5.7
-      # - image: circleci/mysql:5.7-ram
-      #   command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_bin --innodb-large-prefix=true --innodb-file-format=Barracuda
-      #   environment:
-      #     MYSQL_USER: root
-      #     MYSQL_ALLOW_EMPTY_PASSWORD: true
+      - image: circleci/mysql:5.7-ram
+        command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_bin --innodb-large-prefix=true --innodb-file-format=Barracuda
+        environment:
+          MYSQL_USER: root
+          MYSQL_ALLOW_EMPTY_PASSWORD: true
 
       # - image: boxfuse/flyway:latest
         # command: -url=jdbc:mysql://localhost:3306 -schemas=mate -user=root  -connectRetries=10 migrate
+
+    working_directory: ~/repo
+
+    steps:
+      - run: echo  '--template template.yaml --parameters-override AppStage=<<parameters.stage>> '
+      - run: echo ' '${CIRCLE_BRANCH}'_USERPATH'
+
+
+      - run:
+          name: Update pipenv
+          command: |
+            sudo pip3 install --upgrade pipenv
+
+      - checkout
+
+      - run: sudo apt-get update 
+      - run: sudo apt-get install -y default-mysql-client
+      # - run: sudo apt install make
+      - run: sudo wget -qO- https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/6.4.4/flyway-commandline-6.4.4-linux-x64.tar.gz | tar xvz && sudo ln -s `pwd`/flyway-6.4.4/flyway /usr/local/bin 
+      # - run: sudo sh -c 'echo "docker run --rm flyway/flyway:6.4.4 $*" > /usr/local/bin/flyway && chmod +x /usr/local/bin/flyway'
+
+      # 
+      - run: 
+          command: |
+            dir .
+            pwd
+
+      - run:
+          name: install dockerize
+          command: wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz && sudo tar -C /usr/local/bin -xzvf dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz && rm dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz
+          environment:
+            DOCKERIZE_VERSION: v0.3.0
+      - run:
+          name: Wait for db
+          command: dockerize -wait tcp://localhost:3306 -timeout 1m
+
+      - run:
+          name: Mysql database
+          command: mysql  -h 127.0.0.1 -u root  -e "create database mate;"
+
+
+      - run: 
+          command: |
+            flyway -url=jdbc:mysql://localhost:3306 -schemas=mate -locations=filesystem:./flyway_scripts/src -user=root migrate  
+
+
+      - run: 
+          command: |
+            flyway -url=jdbc:mysql://localhost:3306 -schemas=mate -user=root info  
+
+      - run:
+          command: mysql  -h 127.0.0.1 -u root  -e "use mate; select * from AccountLevel;"
+
+
+
+  deploy_to_target:
+    parameters:
+      stage:
+        type: string
+
+    # executor: python/default
+    docker:
+      - image: circleci/python:3.7
+        environment:
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_DB: mate
+          MYSQL_USER: root
+          MYSQL_ALLOW_EMPTY_PASSWORD: true
+          MYSQL_PASSWORD:
+    
 
     working_directory: ~/repo
 
@@ -62,22 +137,11 @@ jobs:
             echo "this computers public ip address is $public_ip_address"
             aws ec2 authorize-security-group-ingress --region us-west-2 --group-id sg-04ee700a973f11ef4 --ip-permissions "[{\"IpProtocol\": \"tcp\", \"FromPort\": 	3306, \"ToPort\": 	3306, \"IpRanges\": [{\"CidrIp\": \"${public_ip_address}/32\"}]}]"
 
-
-      # - run: echo $(wget -qO- http://checkip.amazonaws.com)
       - run: aws --version
-
-      # - run:
-      #     name: install dockerize
-      #     command: wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz && sudo tar -C /usr/local/bin -xzvf dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz && rm dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz
-      #     environment:
-      #       DOCKERIZE_VERSION: v0.3.0
-      # - run:
-      #     name: Wait for db
-      #     command: dockerize -wait tcp://localhost:3306 -timeout 1m
 
       - run:
           name: Mysql database
-          command: mysql  -h blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com -u blueoceansa -pSecur3!! -e "create database mate;"
+          command: mysql  -h blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com -u blueoceansa -pSecur3!! -e "create database IF NOT EXISTS mate;"
 
       - run: 
           command: |
@@ -91,22 +155,7 @@ jobs:
       - run:
           command: mysql  -h blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com -u blueoceansa -pSecur3!!  -e "use mate; select * from AccountLevel;"
 
-      # - run:
-      #     name: Mysql database
-      #     command: mysql  -h 127.0.0.1 -u root  -e "create database mate;"
 
-
-      # - run: 
-      #     command: |
-      #       flyway -url=jdbc:mysql://localhost:3306 -schemas=mate -locations=filesystem:./flyway_scripts/src -user=root migrate  
-
-
-      # - run: 
-      #     command: |
-      #       flyway -url=jdbc:mysql://localhost:3306 -schemas=mate -user=root info  
-
-      # - run:
-      #     command: mysql  -h 127.0.0.1 -u root  -e "use mate; select * from AccountLevel;"
             
 
       # - setup_remote_docker
@@ -165,5 +214,8 @@ jobs:
 workflows:
   main:
     jobs:
-      - build-and-test:
+      # - build-and-test:
+      #     stage: blue
+
+      - deploy_to_target:
           stage: blue
