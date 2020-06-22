@@ -32,8 +32,13 @@ jobs:
       - run: echo  '--template template.yaml --parameters-override AppStage=<<parameters.stage>> '
       - run: echo ' '${CIRCLE_BRANCH}'_USERPATH'
 
+      - run:
+          name: Update pipenv
+          command: |
+            sudo pip3 install --upgrade pipenv
+
       # - run: sudo apt install -y libsqlite3-dev zlib1g-dev
-      - run: sudo apt-get install mysql-client
+      # - run: sudo apt-get install mysql-client
       # - run: sudo docker-python-ext-install zip
       # - run: sudo composer self-update
 
