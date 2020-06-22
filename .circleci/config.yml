@@ -57,6 +57,7 @@ jobs:
             pwd
 
       - run: echo $(wget -qO- http://checkip.amazonaws.com)
+      - run: aws help
 
       # - run:
       #     name: install dockerize
