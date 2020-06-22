@@ -1,0 +1,18 @@
+services:
+  my_sql_db:
+    image: percona:latest
+    container_name: my_sql_db_3
+    environment:
+      MYSQL_ROOT_PASSWORD: Betawi45!
+      MYSQL_DATABASE: aidentity3
+    ports:
+    - 13307:3306
+
+  migration:
+    image: boxfuse/flyway:latest
+    container_name: flyway_migration_3
+    volumes:
+      - ./src:/flyway/sql
+    command: -url=jdbc:mysql://host.docker.internal:13307 -schemas=aidentity3 -user=root -password=Betawi45! -connectRetries=10 migrate
+    depends_on:
+    - my_sql_db
