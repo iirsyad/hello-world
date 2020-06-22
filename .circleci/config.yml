@@ -10,35 +10,60 @@ jobs:
       stage:
         type: string
 
-    executor: python/default
-    steps:
+    # executor: python/default
+    docker:
+      - image: circleci/python:3.7
+        environment:
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_DB: mate
+          MYSQL_USER: root
+          MYSQL_ALLOW_EMPTY_PASSWORD: true
+          MYSQL_PASSWORD:
+    
+      - image: mysql:5.7
+        command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_bin --innodb-large-prefix=true --innodb-file-format=Barracuda
+        environment:
+          MYSQL_USER: root
+          MYSQL_ALLOW_EMPTY_PASSWORD: true
 
+    steps:
       - run: echo  '--template template.yaml --parameters-override AppStage=<<parameters.stage>> '
       - run: echo ' '${CIRCLE_BRANCH}'_USERPATH'
-      - checkout
-      # - setup_remote_docker:
-      #     docker_layer_caching: true
-      - setup_remote_docker
-      - run: 
-          command: |
-            dir .
-            pwd
+
+      - run: sudo apt install -y libsqlite3-dev zlib1g-dev
+      - run: sudo docker-php-ext-install zip
+      - run: sudo composer self-update
+
       - run:
-          command: |
-            set -x
-            docker-compose up -d
+          name: Mysql database
+          command: mysql  -h 127.0.0.1 -u root -e "create database mate;"
+
+      # - run: echo  '--template template.yaml --parameters-override AppStage=<<parameters.stage>> '
+      # - run: echo ' '${CIRCLE_BRANCH}'_USERPATH'
+      # - checkout
+      # # - setup_remote_docker:
+      # #     docker_layer_caching: true
+      # - setup_remote_docker
+      # - run: 
+      #     command: |
+      #       dir .
+      #       pwd
+      # - run:
+      #     command: |
+      #       set -x
+      #       docker-compose up -d
 
       
-      - run:
-          name: Waiting for dockers to be ready
-          command: |
-            for i in `seq 1 60`;
-            do
-              nc -z localhost 3306 && echo Success && exit 0
-              echo -n .
-              sleep 1
-            done
-            echo Failed waiting for dockers && exit 1
+      # - run:
+      #     name: Waiting for dockers to be ready
+      #     command: |
+      #       for i in `seq 1 60`;
+      #       do
+      #         nc -z localhost 3306 && echo Success && exit 0
+      #         echo -n .
+      #         sleep 1
+      #       done
+      #       echo Failed waiting for dockers && exit 1
 
 
       # - checkout
