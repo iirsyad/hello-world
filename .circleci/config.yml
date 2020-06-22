@@ -71,7 +71,7 @@ jobs:
 
       - run: 
           command: |
-            flyway -url=jdbc:mysql://localhost:3306 -schemas=mate -locations=~/flyway_scripts/src -user=root migrate  
+            flyway -url=jdbc:mysql://localhost:3306 -schemas=mate -locations=filesystem:~/flyway_scripts/src -user=root migrate  
 
 
       - run: 
