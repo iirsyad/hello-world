@@ -21,11 +21,11 @@ jobs:
           MYSQL_PASSWORD:
     
       # - image: mysql:5.7
-      - image: circleci/mysql:5.7-ram
-        command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_bin --innodb-large-prefix=true --innodb-file-format=Barracuda
-        environment:
-          MYSQL_USER: root
-          MYSQL_ALLOW_EMPTY_PASSWORD: true
+      # - image: circleci/mysql:5.7-ram
+      #   command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_bin --innodb-large-prefix=true --innodb-file-format=Barracuda
+      #   environment:
+      #     MYSQL_USER: root
+      #     MYSQL_ALLOW_EMPTY_PASSWORD: true
 
       # - image: boxfuse/flyway:latest
         # command: -url=jdbc:mysql://localhost:3306 -schemas=mate -user=root  -connectRetries=10 migrate
@@ -36,6 +36,7 @@ jobs:
       - run: echo  '--template template.yaml --parameters-override AppStage=<<parameters.stage>> '
       - run: echo ' '${CIRCLE_BRANCH}'_USERPATH'
 
+
       - run:
           name: Update pipenv
           command: |
@@ -43,29 +44,37 @@ jobs:
 
       - run: sudo apt-get update 
       - run: sudo apt-get install -y default-mysql-client
+      - run: sudo apt install make
+      # - run: wget -qO- https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/6.4.4/flyway-commandline-6.4.4-linux-x64.tar.gz | tar xvz && sudo ln -s `pwd`/flyway-6.4.4/flyway /usr/local/bin 
+      - run: sudo sh -c 'echo "docker run --rm flyway/flyway:6.4.4 $*" > /usr/local/bin/flyway && chmod +x /usr/local/bin/flyway'
+
       - checkout
       - run: 
           command: |
             dir .
             pwd
+      - run: 
+          command: |
+            flyway info     
 
-      - run:
-          name: install dockerize
-          command: wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz && sudo tar -C /usr/local/bin -xzvf dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz && rm dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz
-          environment:
-            DOCKERIZE_VERSION: v0.3.0
-      - run:
-          name: Wait for db
-          command: dockerize -wait tcp://localhost:3306 -timeout 1m
 
-      - run:
-          name: Mysql database
-          command: mysql  -h 127.0.0.1 -u root -e "create database mate;"
+      # - run:
+      #     name: install dockerize
+      #     command: wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz && sudo tar -C /usr/local/bin -xzvf dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz && rm dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz
+      #     environment:
+      #       DOCKERIZE_VERSION: v0.3.0
+      # - run:
+      #     name: Wait for db
+      #     command: dockerize -wait tcp://localhost:3306 -timeout 1m
 
-      - setup_remote_docker
+      # - run:
+      #     name: Mysql database
+      #     command: mysql  -h 127.0.0.1 -u root -e "create database mate;"
 
-      - run:
-          command: docker run --rm  boxfuse/flyway:latest -url=jdbc:mysql:localhost:mate -user=root migrate
+      # - setup_remote_docker
+
+      # - run:
+      #     command: docker run --rm  boxfuse/flyway:latest -url=jdbc:mysql:localhost:mate -user=root migrate
           # command: docker run --rm -v ./flyway_scripts/src:/flyway/sql boxfuse/flyway -url=jdbc:mysql:localhost:mate -user=root migrate
 
       # - setup_remote_docker
