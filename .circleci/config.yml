@@ -15,7 +15,10 @@ jobs:
 
       - run: echo  '--template template.yaml --parameters-override AppStage=<<parameters.stage>> '
       - run: echo ' '${CIRCLE_BRANCH}'_USERPATH'
-      - run: dir .
+      - run: 
+          command: |
+            dir .
+            pwd
       # - run:
       #     command: |
       #       set -x
