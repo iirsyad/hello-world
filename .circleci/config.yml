@@ -20,10 +20,10 @@ jobs:
           command: |
             dir .
             pwd
-      # - run:
-      #     command: |
-      #       set -x
-      #       docker-compose up -d
+      - run:
+          command: |
+            set -x
+            docker-compose up -d
 
 
       # - checkout
