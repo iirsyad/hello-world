@@ -28,6 +28,7 @@ jobs:
           MYSQL_ALLOW_EMPTY_PASSWORD: true
 
       - image: boxfuse/flyway:latest
+        command: -url=jdbc:mysql://localhost:3306 -schemas=mate -user=root  -connectRetries=10 migrate
 
     working_directory: ~/repo
 
@@ -62,8 +63,8 @@ jobs:
           command: mysql  -h 127.0.0.1 -u root -e "create database mate;"
 
 
-      - run:
-          command: docker run --rm -v ./flyway_scripts/src:/flyway/sql boxfuse/flyway -url=jdbc:mysql:localhost:mate -user=root migrate
+      # - run:
+      #     command: docker run --rm -v ./flyway_scripts/src:/flyway/sql boxfuse/flyway -url=jdbc:mysql:localhost:mate -user=root migrate
 
       # - setup_remote_docker
 
