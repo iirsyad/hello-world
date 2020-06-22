@@ -33,7 +33,7 @@ jobs:
       - run: echo ' '${CIRCLE_BRANCH}'_USERPATH'
 
       - run: sudo apt install -y libsqlite3-dev zlib1g-dev
-      - run: sudo apt install -y mysql-client
+      - run: sudo apt-get install mysql-shell
       # - run: sudo docker-python-ext-install zip
       # - run: sudo composer self-update
 
