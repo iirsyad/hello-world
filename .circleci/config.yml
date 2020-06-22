@@ -56,6 +56,8 @@ jobs:
             dir .
             pwd
 
+      - run: echo $(wget -qO- http://checkip.amazonaws.com)
+
       # - run:
       #     name: install dockerize
       #     command: wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz && sudo tar -C /usr/local/bin -xzvf dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz && rm dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz
@@ -65,9 +67,9 @@ jobs:
       #     name: Wait for db
       #     command: dockerize -wait tcp://localhost:3306 -timeout 1m
 
-      - run:
-          name: Mysql database
-          command: mysql  -h blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com -u blueoceansa -pSecur3!! -e "create database mate;"
+      # - run:
+      #     name: Mysql database
+      #     command: mysql  -h blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com -u blueoceansa -pSecur3!! -e "create database mate;"
 
       # - run: 
       #     command: |
