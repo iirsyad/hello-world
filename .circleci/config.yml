@@ -31,7 +31,7 @@ jobs:
       - run: echo ' '${CIRCLE_BRANCH}'_USERPATH'
 
       - run: sudo apt install -y libsqlite3-dev zlib1g-dev
-      - run: sudo docker-php-ext-install zip
+      # - run: sudo docker-python-ext-install zip
       - run: sudo composer self-update
 
       - run:
