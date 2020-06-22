@@ -26,11 +26,14 @@ jobs:
           MYSQL_USER: root
           MYSQL_ALLOW_EMPTY_PASSWORD: true
 
+    working_directory: ~/repo
+
     steps:
       - run: echo  '--template template.yaml --parameters-override AppStage=<<parameters.stage>> '
       - run: echo ' '${CIRCLE_BRANCH}'_USERPATH'
 
       - run: sudo apt install -y libsqlite3-dev zlib1g-dev
+      - run: sudo apt install -y mysql-client
       # - run: sudo docker-python-ext-install zip
       # - run: sudo composer self-update
 
