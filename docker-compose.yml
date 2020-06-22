@@ -6,4 +6,4 @@ services:
     container_name: flyway_migration_3
     volumes:
       - ./flyway_scripts/src:/flyway/sql
-    command: -url=jdbc:mysql://host.docker.internal:3306 -schemas=mate -user=root  -connectRetries=10 migrate
+    command: -url=jdbc:mysql://localhost:3306 -schemas=mate -user=root  -connectRetries=10 migrate
