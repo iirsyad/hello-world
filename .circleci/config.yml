@@ -20,7 +20,8 @@ jobs:
           MYSQL_ALLOW_EMPTY_PASSWORD: true
           MYSQL_PASSWORD:
     
-      - image: mysql:5.7
+      # - image: mysql:5.7
+      - image: circleci/mysql:5.7-ram
         command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_bin --innodb-large-prefix=true --innodb-file-format=Barracuda
         environment:
           MYSQL_USER: root
