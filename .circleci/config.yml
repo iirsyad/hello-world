@@ -21,11 +21,11 @@ jobs:
           MYSQL_PASSWORD:
     
       # - image: mysql:5.7
-      - image: circleci/mysql:5.7-ram
-        command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_bin --innodb-large-prefix=true --innodb-file-format=Barracuda
-        environment:
-          MYSQL_USER: root
-          MYSQL_ALLOW_EMPTY_PASSWORD: true
+      # - image: circleci/mysql:5.7-ram
+      #   command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_bin --innodb-large-prefix=true --innodb-file-format=Barracuda
+      #   environment:
+      #     MYSQL_USER: root
+      #     MYSQL_ALLOW_EMPTY_PASSWORD: true
 
       # - image: boxfuse/flyway:latest
         # command: -url=jdbc:mysql://localhost:3306 -schemas=mate -user=root  -connectRetries=10 migrate
@@ -56,55 +56,57 @@ jobs:
             dir .
             pwd
 
+      - run: 
+          command: |
+            public_ip_address=$(wget -qO- http://checkip.amazonaws.com)
+            echo "this computers public ip address is $public_ip_address"
+            aws ec2 authorize-security-group-ingress --region us-west-2 --group-id sg-04ee700a973f11ef4 --ip-permissions "[{\"IpProtocol\": \"tcp\", \"FromPort\": 	3306, \"ToPort\": 	3306, \"IpRanges\": [{\"CidrIp\": \"${public_ip_address}/32\"}]}]"
 
 
       # - run: echo $(wget -qO- http://checkip.amazonaws.com)
       - run: aws --version
 
-      - run:
-          name: install dockerize
-          command: wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz && sudo tar -C /usr/local/bin -xzvf dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz && rm dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz
-          environment:
-            DOCKERIZE_VERSION: v0.3.0
-      - run:
-          name: Wait for db
-          command: dockerize -wait tcp://localhost:3306 -timeout 1m
-
       # - run:
-      #     name: Mysql database
-      #     command: mysql  -h blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com -u blueoceansa -pSecur3!! -e "create database mate;"
-
-      # - run: 
-      #     command: |
-      #       flyway -url=jdbc:mysql://blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com:3306/mate -locations=filesystem:./flyway_scripts/src -user=blueoceansa -password=Secur3!! migrate  
-
-      # - run: 
-      #     command: |
-      #       docker run --rm boxfuse/flyway -url=jdbc:mysql://blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com:3306/mate -user=blueoceansa -password=Secur3!! info
-
-      # - run: 
-      #     command: |
-      #       flyway -url=jdbc:mysql://blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com:3306 -schemas=mate -user=blueoceansa -password=Secur3!! info  
-
+      #     name: install dockerize
+      #     command: wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz && sudo tar -C /usr/local/bin -xzvf dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz && rm dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz
+      #     environment:
+      #       DOCKERIZE_VERSION: v0.3.0
       # - run:
-      #     command: mysql  -h blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com -u blueoceansa -pSecur3!!  -e "use mate; select * from AccountLevel;"
+      #     name: Wait for db
+      #     command: dockerize -wait tcp://localhost:3306 -timeout 1m
 
       - run:
           name: Mysql database
-          command: mysql  -h 127.0.0.1 -u root  -e "create database mate;"
+          command: mysql  -h blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com -u blueoceansa -pSecur3!! -e "create database mate;"
+
+      - run: 
+          command: |
+            flyway -url=jdbc:mysql://blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com:3306/mate -locations=filesystem:./flyway_scripts/src -user=blueoceansa -password=Secur3!! migrate  
 
 
       - run: 
           command: |
-            flyway -url=jdbc:mysql://localhost:3306 -schemas=mate -locations=filesystem:./flyway_scripts/src -user=root migrate  
-
-
-      - run: 
-          command: |
-            flyway -url=jdbc:mysql://localhost:3306 -schemas=mate -user=root info  
+            flyway -url=jdbc:mysql://blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com:3306 -schemas=mate -user=blueoceansa -password=Secur3!! info  
 
       - run:
-          command: mysql  -h 127.0.0.1 -u root  -e "use mate; select * from AccountLevel;"
+          command: mysql  -h blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com -u blueoceansa -pSecur3!!  -e "use mate; select * from AccountLevel;"
+
+      # - run:
+      #     name: Mysql database
+      #     command: mysql  -h 127.0.0.1 -u root  -e "create database mate;"
+
+
+      # - run: 
+      #     command: |
+      #       flyway -url=jdbc:mysql://localhost:3306 -schemas=mate -locations=filesystem:./flyway_scripts/src -user=root migrate  
+
+
+      # - run: 
+      #     command: |
+      #       flyway -url=jdbc:mysql://localhost:3306 -schemas=mate -user=root info  
+
+      # - run:
+      #     command: mysql  -h 127.0.0.1 -u root  -e "use mate; select * from AccountLevel;"
             
 
       # - setup_remote_docker
@@ -146,6 +148,10 @@ jobs:
       #         sleep 1
       #       done
       #       echo Failed waiting for dockers && exit 1
+
+      # - run: 
+      #     command: |
+      #       docker run --rm boxfuse/flyway -url=jdbc:mysql://blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com:3306/mate -user=blueoceansa -password=Secur3!! info
 
 
       # - checkout
