@@ -37,7 +37,8 @@ jobs:
           command: |
             sudo pip3 install --upgrade pipenv
 
-      - run: sudo apt-get update && apt-get install -y mysql-client
+      - run: sudo apt-get update 
+      - run: sudo apt-get install -y mysql-client
 
       # - run: sudo apt install -y libsqlite3-dev zlib1g-dev
       # - run: sudo apt-get install mysql-client
