@@ -48,7 +48,7 @@ jobs:
       - run: sudo apt-get install -y default-mysql-client
       # - run: sudo apt install make
       - run: sudo wget -qO- https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/6.4.4/flyway-commandline-6.4.4-linux-x64.tar.gz | tar xvz && sudo ln -s `pwd`/flyway-6.4.4/flyway /usr/local/bin 
-      # - run: sudo sh -c 'echo "docker run --rm flyway/flyway:6.4.4 $*" > /usr/local/bin/flyway && chmod +x /usr/local/bin/flyway'
+      - run: sudo sh -c 'echo "docker run --rm flyway/flyway:6.4.4 $*" > /usr/local/bin/flyway && chmod +x /usr/local/bin/flyway'
       - run: sudo apt-get install awscli
       # 
       - run: 
@@ -77,6 +77,18 @@ jobs:
       - run:
           name: Mysql database
           command: mysql  -h blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com -u blueoceansa -pSecur3!! -e "create database mate;"
+
+      - run: 
+          command: |
+            flyway -url=jdbc:mysql://blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com:3306 -schemas=mate -locations=filesystem:./flyway_scripts/src -user=blueoceansa -password=Secur3!! migrate  
+
+
+      - run: 
+          command: |
+            flyway -url=jdbc:mysql://blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com:3306 -schemas=mate -user=blueoceansa -password=Secur3!! info  
+
+      - run:
+          command: mysql  -h blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com -u blueoceansa -pSecur3!!  -e "use mate; select * from AccountLevel;"
 
       # - run: 
       #     command: |
