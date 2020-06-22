@@ -74,13 +74,13 @@ jobs:
       #     name: Wait for db
       #     command: dockerize -wait tcp://localhost:3306 -timeout 1m
 
-      - run:
-          name: Mysql database
-          command: mysql  -h blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com -u blueoceansa -pSecur3!! -e "create database mate;"
+      # - run:
+      #     name: Mysql database
+      #     command: mysql  -h blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com -u blueoceansa -pSecur3!! -e "create database mate;"
 
       - run: 
           command: |
-            flyway -url=jdbc:mysql://blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com:3306 -schemas=mate -locations=filesystem:./flyway_scripts/src -user=blueoceansa -password=Secur3!! migrate  
+            flyway -url=jdbc:mysql://blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com:3306/mate -locations=filesystem:./flyway_scripts/src -user=blueoceansa -password=Secur3!! migrate  
 
 
       - run: 
