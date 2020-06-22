@@ -11,9 +11,6 @@ jobs:
       stage:
         type: string   
 
-    parameters:
-      stage:
-        type: string
 
     # executor: python/default
     docker:
