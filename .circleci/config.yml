@@ -27,6 +27,8 @@ jobs:
           MYSQL_USER: root
           MYSQL_ALLOW_EMPTY_PASSWORD: true
 
+      - image: boxfuse/flyway:latest
+
     working_directory: ~/repo
 
     steps:
@@ -59,12 +61,16 @@ jobs:
           name: Mysql database
           command: mysql  -h 127.0.0.1 -u root -e "create database mate;"
 
-      - setup_remote_docker
 
       - run:
-          command: |
-            set -x
-            docker-compose up
+          command: docker run --rm -v ./flyway_scripts/src:/flyway/sql boxfuse/flyway -url=jdbc:mysql:localhost:mate -user=root migrate
+
+      # - setup_remote_docker
+
+      # - run:
+      #     command: |
+      #       set -x
+      #       docker-compose up
 
       # - run: echo  '--template template.yaml --parameters-override AppStage=<<parameters.stage>> '
       # - run: echo ' '${CIRCLE_BRANCH}'_USERPATH'
