@@ -90,12 +90,16 @@ jobs:
       stage:
         type: string
 
+      dbName:
+        type: string
+        default: aidentityprod
+
     # executor: python/default
     docker:
       - image: circleci/python:3.7
         environment:
           MYSQL_HOST: 127.0.0.1
-          MYSQL_DB: mate
+          MYSQL_DB: <<parameters.dbName>>
           MYSQL_USER: root
           MYSQL_ALLOW_EMPTY_PASSWORD: true
           MYSQL_PASSWORD:
@@ -137,19 +141,19 @@ jobs:
 
       - run:
           name: Mysql database
-          command: mysql  -h blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com -u blueoceansa -pSecur3!! -e "create database IF NOT EXISTS mate;"
+          command: mysql  -h blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com -u blueoceansa -pSecur3!! -e "create database IF NOT EXISTS <<parameters.dbName>>;"
 
       - run: 
           command: |
-            flyway -url=jdbc:mysql://blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com:3306/mate -locations=filesystem:./flyway_scripts/src -user=blueoceansa -password=Secur3!! migrate  
+            flyway -url=jdbc:mysql://blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com:3306/<<parameters.dbName>> -locations=filesystem:./flyway_scripts/src -user=blueoceansa -password=Secur3!! migrate  
 
 
       - run: 
           command: |
-            flyway -url=jdbc:mysql://blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com:3306 -schemas=mate -user=blueoceansa -password=Secur3!! info  
+            flyway -url=jdbc:mysql://blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com:3306 -schemas=<<parameters.dbName>> -user=blueoceansa -password=Secur3!! info  
 
       - run:
-          command: mysql  -h blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com -u blueoceansa -pSecur3!!  -e "use mate; select * from AccountLevel;"
+          command: mysql  -h blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com -u blueoceansa -pSecur3!!  -e "use <<parameters.dbName>>; select * from AccountLevel;"
 
 
       # - run:
@@ -226,8 +230,8 @@ jobs:
 workflows:
   main:
     jobs:
-      - build-and-test:
-          stage: blue
-
-      # - deploy_to_target:
+      # - build-and-test:
       #     stage: blue
+
+      - deploy_to_target:
+          stage: blue
