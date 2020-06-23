@@ -10,14 +10,17 @@ jobs:
     parameters:
       stage:
         type: string   
-
+  
+      dbName:
+        type: string
+        default: aidentitytest
 
     # executor: python/default
     docker:
       - image: circleci/python:3.7
         environment:
           MYSQL_HOST: 127.0.0.1
-          MYSQL_DB: mate
+          MYSQL_DB: <<parameters.dbName>>
           MYSQL_USER: root
           MYSQL_ALLOW_EMPTY_PASSWORD: true
           MYSQL_PASSWORD:
@@ -37,8 +40,6 @@ jobs:
     steps:
       - run: echo  '--template template.yaml --parameters-override AppStage=<<parameters.stage>> '
       - run: echo ' '${CIRCLE_BRANCH}'_USERPATH'
-
-
       - run:
           name: Update pipenv
           command: |
@@ -48,11 +49,9 @@ jobs:
 
       - run: sudo apt-get update 
       - run: sudo apt-get install -y default-mysql-client
-      # - run: sudo apt install make
       - run: sudo wget -qO- https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/6.4.4/flyway-commandline-6.4.4-linux-x64.tar.gz | tar xvz && sudo ln -s `pwd`/flyway-6.4.4/flyway /usr/local/bin 
       # - run: sudo sh -c 'echo "docker run --rm flyway/flyway:6.4.4 $*" > /usr/local/bin/flyway && chmod +x /usr/local/bin/flyway'
 
-      # 
       - run: 
           command: |
             dir .
@@ -68,21 +67,21 @@ jobs:
           command: dockerize -wait tcp://localhost:3306 -timeout 1m
 
       - run:
-          name: Mysql database
-          command: mysql  -h 127.0.0.1 -u root  -e "create database mate;"
+          name: Mysql create database
+          command: mysql  -h 127.0.0.1 -u root  -e "CREATE DATABASE IF NOT EXISTS <<parameters.dbName>>;"
 
 
       - run: 
           command: |
-            flyway -url=jdbc:mysql://localhost:3306 -schemas=mate -locations=filesystem:./flyway_scripts/src -user=root migrate  
+            flyway -url=jdbc:mysql://localhost:3306 -schemas=<<parameters.dbName>> -locations=filesystem:./flyway_scripts/src -user=root migrate  
 
 
       - run: 
           command: |
-            flyway -url=jdbc:mysql://localhost:3306 -schemas=mate -user=root info  
+            flyway -url=jdbc:mysql://localhost:3306 -schemas=<<parameters.dbName>> -user=root info  
 
       - run:
-          command: mysql  -h 127.0.0.1 -u root  -e "use mate; select * from AccountLevel;"
+          command: mysql  -h 127.0.0.1 -u root  -e "use <<parameters.dbName>>; select * from AccountLevel;"
 
 
 
@@ -227,8 +226,8 @@ jobs:
 workflows:
   main:
     jobs:
-      # - build-and-test:
-      #     stage: blue
-
-      - deploy_to_target:
+      - build-and-test:
           stage: blue
+
+      # - deploy_to_target:
+      #     stage: blue
