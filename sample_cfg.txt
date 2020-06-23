@@ -1,0 +1,135 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci:python
+        environment:
+          MYSQL_PASSWORD='test_pw'
+          MYSQL_DATABASE='test_db'
+          MYSQL_ROOT_HOST=%
+          DB_HOST=127.0.0.1
+          DB_PORT=3306
+      - image: mysql:5.7
+        environment:
+          MYSQL_PASSWORD=test_pw
+          MYSQL_DATABASE=loans
+          MYSQL_ROOT_HOST=%
+          DB_HOST=127.0.0.1
+          DB_PORT=3306
+    steps:
+      - checkout
+      - run:
+          name: Update pipenv
+          command: |
+          sudo pip3 install --upgrade pipenv
+      - run:
+          name: Install dependencies and run tests
+          command: |
+            mysql -u root -h 127.0.0.1 -ptest_pw
+            cd api && pipenv --three && pipenv install
+            cp config.template.yml test_config.yml
+            pipenv run pytest
+      - run:
+          name: Setup front end
+          command: |
+            cd frontend
+            yarn install
+            yarn build
+      - store_artifacts:
+          path: test-reports
+          destination: test-reports
+
+
+
+
+
+version: 2
+jobs:
+  build:
+    docker:
+      # specify the version you desire here
+      - image: circleci/php:7.2-apache-stretch-node-browsers
+        environment:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_HOST: 127.0.0.1
+
+      # Specify service dependencies here if necessary
+      # CircleCI maintains a library of pre-built images
+      # documented at https://circleci.com/docs/2.0/circleci-images/
+      # - image: circleci/mysql:9.4
+
+    steps:
+      - checkout
+      - run:
+          name: Install things we need
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y libzip-dev
+            sudo apt-get install -y zlib1g-dev libicu-dev g++
+            sudo apt-get install mysql-client
+            sudo apt-get -y install mysql-server
+      - run:
+          name: Install PHP exts
+          command: |
+            sudo docker-php-ext-install zip
+            sudo docker-php-ext-configure intl
+            sudo docker-php-ext-install intl
+            sudo docker-php-ext-install pdo_mysql
+      - run:
+          name: Fix MySQL socket config
+          command: |
+            sudo sh -c "echo 'pdo_mysql.default_socket=/var/run/mysqld/mysqld.sock' > /usr/local/etc/php/conf.d/pdo.ini"
+      - run:
+          name: Start database server
+          command: |
+            sudo service mysql start
+            sleep 2
+            ps aux | grep mysql
+      - run:
+          name: Create non-admin user
+          command: |
+            sudo mysql -u root -e "CREATE user myuser IDENTIFIED BY 'password';"
+      - run:
+          name: Run tests
+          command: |
+            php connect.php
+
+
+
+
+
+version: 2.0
+
+jobs:
+  Python_2.7:
+      docker:
+        - image: circleci/python:2.7
+      steps: &steps
+        - checkout
+        - run: sudo pip install -r requirements.txt
+        - run: sudo pip install coverage flake8 pytest
+        - run: python --version ; pip --version ; pwd ; ls
+        # stop the build if there are Python syntax errors or undefined names
+        - run: flake8 . --count --select=E901,E999,F821,F822,F823 --show-source --statistics
+        # exit-zero treats all errors as warnings.  The GitHub editor is 127 chars wide      
+        - run: flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        - run: pytest
+  Python_3.6:
+      docker:
+        - image: circleci/python:3.6
+      steps: *steps
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - Python_2.7
+      - Python_3.6
+
+
+    - run: mkdir test-reports
+    - run: coverage report && coverage xml -o test-reports/coverage.xml
+    - store_test_results:
+       path: test-reports
+    - store_artifacts:
+       path: test-reports

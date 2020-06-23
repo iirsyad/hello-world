@@ -1,3 +1,5 @@
+DROP PROCEDURE IF EXISTS AddBenchmarkCompetitorBrands;
+
 DELIMITER $$
 CREATE  PROCEDURE `AddBenchmarkCompetitorBrands`(
 															 IN pBenchmarkId INT, 
@@ -25,6 +27,8 @@ BEGIN
 
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS AddBlobSourceMetadata;
 
 DELIMITER $$
 CREATE  PROCEDURE `AddBlobSourceMetadata`( 
@@ -59,6 +63,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS AddBrandSetupRequest;
+
 DELIMITER $$
 CREATE  PROCEDURE `AddBrandSetupRequest`(IN pBrandId INT, IN pPriority  tinyint)
 BEGIN
@@ -78,6 +84,8 @@ BEGIN
     end if;
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS AddBrandToUser;
 
 DELIMITER $$
 CREATE  PROCEDURE `AddBrandToUser`(IN pUserId VARCHAR(64), 
@@ -154,6 +162,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS AddNewBenchmark;
+
 DELIMITER $$
 CREATE  PROCEDURE `AddNewBenchmark`(IN pUserId VARCHAR(64),
 															 IN pBrandKey VARCHAR(64), 
@@ -199,6 +209,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS AddNewBenchmarkSession;
+
 DELIMITER $$
 CREATE  PROCEDURE `AddNewBenchmarkSession`(IN pUserId VARCHAR(64),
 															 IN pBenchmarkId INT, 
@@ -231,6 +243,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS AddNewBrandSessionTask;
+
 DELIMITER $$
 CREATE  PROCEDURE `AddNewBrandSessionTask`(IN pBrandId INT, 
 															 IN pBrandSessionId INT, 
@@ -255,11 +269,13 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS AddNewContentSource;
+
 DELIMITER $$
 CREATE  PROCEDURE `AddNewContentSource`( 
-                                                             IN pSourceHandle VARCHAR(128),
-                                                             IN pSourceType VARCHAR(128),
-                                                             OUT pSourceId int)
+						IN pSourceHandle VARCHAR(128),
+						IN pSourceType VARCHAR(128),
+						OUT pSourceId int)
 BEGIN
 	
 	set@src_type_id = (select Id from ChannelType where name = pSourceType );
@@ -284,6 +300,9 @@ BEGIN
 
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS AddNewContentSource2;
+
 
 DELIMITER $$
 CREATE  PROCEDURE `AddNewContentSource2`( 
@@ -315,6 +334,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS AddNewPayment;
+
 DELIMITER $$
 CREATE  PROCEDURE `AddNewPayment`(IN pPaymentMethodId VARCHAR(64),
 															 IN pUserId VARCHAR(128), 
@@ -339,6 +360,9 @@ BEGIN
  
 END$$
 DELIMITER ;
+
+
+DROP PROCEDURE IF EXISTS AddNewSessionToExistingBrand;
 
 DELIMITER $$
 CREATE  PROCEDURE `AddNewSessionToExistingBrand`(IN pUserId VARCHAR(64), 
@@ -395,6 +419,9 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS AddNewSessionToExistingBrand2;
+
+
 DELIMITER $$
 CREATE  PROCEDURE `AddNewSessionToExistingBrand2`(IN pUserId VARCHAR(64), 
 															 IN pBrandKey VARCHAR(64), 
@@ -439,6 +466,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS AddUserFeedback;
+
 DELIMITER $$
 CREATE  PROCEDURE `AddUserFeedback`( IN pUserId VARCHAR(45), IN pUserEmail VARCHAR(255), IN pFeedback VARCHAR(1024))
 BEGIN
@@ -457,6 +486,9 @@ BEGIN
 	WHERE userId = pUserId and email = pUserEmail;
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS AddUserMessage;
+
 
 DELIMITER $$
 CREATE  PROCEDURE `AddUserMessage`( IN pUserId VARCHAR(128), IN pMessage VARCHAR(255), IN pCat SMALLINT(4))
@@ -485,6 +517,9 @@ BEGIN
 	WHERE user_id = pUserId and msg_id = @messageId;
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS CopyBrand;
+
 
 DELIMITER $$
 CREATE  PROCEDURE `CopyBrand`(IN pUser_key NVARCHAR(128), IN pBrand_key NVARCHAR(64))
@@ -981,6 +1016,8 @@ cpBlock: BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS CopyBrand_2;
+
 DELIMITER $$
 CREATE  PROCEDURE `CopyBrand_2`(IN pUser_key NVARCHAR(128), IN pBrand_key NVARCHAR(64))
 cpBlock: BEGIN
@@ -1476,6 +1513,8 @@ cpBlock: BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS DeleteBenchmarkFromBrand;
+
 DELIMITER $$
 CREATE  PROCEDURE `DeleteBenchmarkFromBrand`(IN pBrandKey VARCHAR(64), 
 															 IN pBenchmarkKey VARCHAR(64))
@@ -1495,6 +1534,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS DeleteBrandFromUser;
+
 DELIMITER $$
 CREATE  PROCEDURE `DeleteBrandFromUser`(IN pUserId VARCHAR(64), 
 															 IN pBrandKey VARCHAR(64))
@@ -1512,6 +1553,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS DeleteUserMessage;
+
 DELIMITER $$
 CREATE  PROCEDURE `DeleteUserMessage`( IN pMessageId INT(11))
 BEGIN
@@ -1526,6 +1569,8 @@ BEGIN
 	SELECT * FROM Message WHERE id = pMessageId;
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS GetAllBrandBenchmarkScoresByKey;
 
 DELIMITER $$
 CREATE  PROCEDURE `GetAllBrandBenchmarkScoresByKey`(IN pBrandKey VARCHAR(64), IN pScoreType VARCHAR(32))
@@ -1556,6 +1601,8 @@ BEGIN
     
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS GetBenchmarkCompetitorBrandsStatus;
 
 DELIMITER $$
 CREATE  PROCEDURE `GetBenchmarkCompetitorBrandsStatus`(IN pBenchmarkId INT, IN pBenchmarkSessionId INT)
@@ -1589,6 +1636,9 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS GetBenchmarkConfiguration;
+
+
 DELIMITER $$
 CREATE  PROCEDURE `GetBenchmarkConfiguration`( pBrandId INT, pBenchmarkId INT)
 BEGIN
@@ -1601,6 +1651,10 @@ BEGIN
 
 END$$
 DELIMITER ;
+
+
+DROP PROCEDURE IF EXISTS GetBenchmarkConfiguration2;
+
 
 DELIMITER $$
 CREATE  PROCEDURE `GetBenchmarkConfiguration2`( pBrandKey VARCHAR(64), pBenchmarkKey VARCHAR(64))
@@ -1616,6 +1670,10 @@ BEGIN
 
 END$$
 DELIMITER ;
+
+
+DROP PROCEDURE IF EXISTS GetBenchmarkConfigurationByKey;
+
 
 DELIMITER $$
 CREATE  PROCEDURE `GetBenchmarkConfigurationByKey`(IN pBrandKey VARCHAR(64), IN pBenchmarkKey varchar(64))
@@ -1636,6 +1694,10 @@ BEGIN
 END$$
 DELIMITER ;
 
+
+DROP PROCEDURE IF EXISTS GetBenchmarkScore;
+
+
 DELIMITER $$
 CREATE  PROCEDURE `GetBenchmarkScore`(IN pBenchmarkId INT, IN pScoreType VARCHAR(32))
 BEGIN
@@ -1650,6 +1712,10 @@ BEGIN
 END$$
 DELIMITER ;
 
+
+DROP PROCEDURE IF EXISTS GetBenchmarkScoreByKey;
+
+
 DELIMITER $$
 CREATE  PROCEDURE `GetBenchmarkScoreByKey`(IN pBenchmarkKey VARCHAR(64), IN pScoreType VARCHAR(32))
 BEGIN
@@ -1663,6 +1729,10 @@ BEGIN
     
 END$$
 DELIMITER ;
+
+
+DROP PROCEDURE IF EXISTS GetBenchmarkSessionConfiguration;
+
 
 DELIMITER $$
 CREATE  PROCEDURE `GetBenchmarkSessionConfiguration`( pBenchmarkId INT, pBenchmarkSessionId INT)
@@ -1682,6 +1752,9 @@ BEGIN
 
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS GetBenchmarkSessionResult;
+
 
 DELIMITER $$
 CREATE  PROCEDURE `GetBenchmarkSessionResult`(IN pBenchmarkId INT, IN pScoreType VARCHAR(32))
@@ -1710,6 +1783,9 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS GetBenchmarksToSchedule;
+
+
 DELIMITER $$
 CREATE  PROCEDURE `GetBenchmarksToSchedule`()
 BEGIN
@@ -1737,6 +1813,8 @@ BEGIN
 	
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS GetBenchmarksToScore;
 
 DELIMITER $$
 CREATE  PROCEDURE `GetBenchmarksToScore`()
@@ -1767,6 +1845,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS GetBenchmarkSummary;
+
 DELIMITER $$
 CREATE  PROCEDURE `GetBenchmarkSummary`(IN pBenchmarkKey varchar(64))
 BEGIN
@@ -1784,6 +1864,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS GetBrandArchetypeGoal;
+
 DELIMITER $$
 CREATE  PROCEDURE `GetBrandArchetypeGoal`(IN pBrandKey VARCHAR(64))
 BEGIN
@@ -1800,6 +1882,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS GetBrandArchetypeGoal2;
+
 DELIMITER $$
 CREATE  PROCEDURE `GetBrandArchetypeGoal2`(IN pBrandId INT)
 BEGIN
@@ -1811,6 +1895,9 @@ BEGIN
 	
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS GetBrandBenchmarkList;
+
 
 DELIMITER $$
 CREATE  PROCEDURE `GetBrandBenchmarkList`(IN pBrandKey VARCHAR(64))
@@ -1834,6 +1921,8 @@ BEGIN
     
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS GetBrandBenchmarkResult;
 
 DELIMITER $$
 CREATE  PROCEDURE `GetBrandBenchmarkResult`(IN pBrandKey VARCHAR(64), IN pBenchmarkKey VARCHAR(64))
@@ -1871,6 +1960,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS GetBrandBenchmarkSummary;
+
 DELIMITER $$
 CREATE  PROCEDURE `GetBrandBenchmarkSummary`(IN pBrandKey VARCHAR(64))
 BEGIN
@@ -1903,6 +1994,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS GetBrandInfoByKey;
+
 DELIMITER $$
 CREATE  PROCEDURE `GetBrandInfoByKey`(IN pBrandKey VARCHAR(64))
 BEGIN
@@ -1930,6 +2023,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS GetBrandInfoConfig;
+
 DELIMITER $$
 CREATE  PROCEDURE `GetBrandInfoConfig`(IN pBrandId INT)
 BEGIN
@@ -1945,6 +2040,9 @@ BEGIN
 
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS GetBrandInfoConfigByKey;
+
 
 DELIMITER $$
 CREATE  PROCEDURE `GetBrandInfoConfigByKey`(IN pBrandKey VARCHAR(64))
@@ -1972,6 +2070,8 @@ BEGIN
 
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS GetBrandList;
 
 DELIMITER $$
 CREATE  PROCEDURE `GetBrandList`(IN pUserId VARCHAR(64))
@@ -2015,6 +2115,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS GetBrandMetaConfig;
+
 DELIMITER $$
 CREATE  PROCEDURE `GetBrandMetaConfig`(brand VARCHAR(64))
 BEGIN
@@ -2025,6 +2127,10 @@ BEGIN
     
 END$$
 DELIMITER ;
+
+
+DROP PROCEDURE IF EXISTS GetBrandScoreResults;
+
 
 DELIMITER $$
 CREATE  PROCEDURE `GetBrandScoreResults`( pBrandId INT, pResultType VARCHAR(32))
@@ -2048,6 +2154,9 @@ BEGIN
 
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS GetBrandScoreResultsByKey;
+
 
 DELIMITER $$
 CREATE  PROCEDURE `GetBrandScoreResultsByKey`( IN pBrandKey VARCHAR(64), IN pResultType VARCHAR(32))
@@ -2074,6 +2183,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS GetBrandSessionArchetypeGoal;
+
 DELIMITER $$
 CREATE  PROCEDURE `GetBrandSessionArchetypeGoal`(IN pBrandId INT)
 BEGIN
@@ -2086,6 +2197,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS GetBrandSessionArchetypeScore;
+
 DELIMITER $$
 CREATE  PROCEDURE `GetBrandSessionArchetypeScore`(IN pSessionKey VARCHAR(128), IN pScoreType VARCHAR(32))
 BEGIN
@@ -2097,6 +2210,8 @@ BEGIN
 	
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS GetBrandSessionBlobInfo;
 
 DELIMITER $$
 CREATE  PROCEDURE `GetBrandSessionBlobInfo`(IN pBrandKey VARCHAR(64), IN pSessionKey VARCHAR(64), IN pSourceId INT, IN pBlobId INT )
@@ -2113,6 +2228,8 @@ BEGIN
 	
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS GetBrandSessionBlobInfoBySource;
 
 DELIMITER $$
 CREATE  PROCEDURE `GetBrandSessionBlobInfoBySource`(IN pBrandKey VARCHAR(64), IN pSessionKey VARCHAR(64), IN pSourceType VARCHAR(128), IN pSourceHandle VARCHAR(128) )
@@ -2135,6 +2252,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS GetBrandSessionBlobQuery;
+
 DELIMITER $$
 CREATE  PROCEDURE `GetBrandSessionBlobQuery`()
 BEGIN
@@ -2153,6 +2272,8 @@ BEGIN
     
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS GetBrandSessionBlobQueryToProcess;
 
 DELIMITER $$
 CREATE  PROCEDURE `GetBrandSessionBlobQueryToProcess`()
@@ -2173,6 +2294,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS GetBrandSessionConfig;
+
 DELIMITER $$
 CREATE  PROCEDURE `GetBrandSessionConfig`(IN pSessionKey VARCHAR(64))
 BEGIN
@@ -2181,6 +2304,9 @@ BEGIN
     WHERE session_key = pSessionKey and run_status_id >= 1;
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS GetBrandSessionDetail;
+
 
 DELIMITER $$
 CREATE  PROCEDURE `GetBrandSessionDetail`(IN pUserId VARCHAR(64), pBrandKey VARCHAR(64), pSessionKey VARCHAR(64))
@@ -2216,6 +2342,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS GetBrandSessionInfoConfig;
+
 DELIMITER $$
 CREATE  PROCEDURE `GetBrandSessionInfoConfig`(IN pBrandId INT, IN pSessionKey VARCHAR(64))
 BEGIN
@@ -2245,6 +2373,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS GetBrandSessionInfoConfigByKey;
+
 DELIMITER $$
 CREATE  PROCEDURE `GetBrandSessionInfoConfigByKey`(IN pBrandId INT, IN pSessionId INT)
 BEGIN
@@ -2266,6 +2396,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS GetBrandSessionScoreResult;
+
 DELIMITER $$
 CREATE  PROCEDURE `GetBrandSessionScoreResult`( pSessionKey VARCHAR(64))
 BEGIN
@@ -2283,6 +2415,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS GetBrandSessionStatus;
+
 DELIMITER $$
 CREATE  PROCEDURE `GetBrandSessionStatus`(IN pUserId VARCHAR(64), pBrandKey VARCHAR(64), pSessionKey VARCHAR(64))
 BEGIN
@@ -2297,6 +2431,8 @@ BEGIN
 
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS GetBrandSetupRequestsToProcess;
 
 DELIMITER $$
 CREATE  PROCEDURE `GetBrandSetupRequestsToProcess`()
@@ -2315,6 +2451,8 @@ BEGIN
     LIMIT 20;
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS GetBrandsToSchedule;
 
 DELIMITER $$
 CREATE  PROCEDURE `GetBrandsToSchedule`()
@@ -2340,6 +2478,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS GetBrandsToSchedule_bk;
+
 DELIMITER $$
 CREATE  PROCEDURE `GetBrandsToSchedule_bk`()
 BEGIN
@@ -2361,6 +2501,9 @@ BEGIN
 END$$
 DELIMITER ;
 
+
+DROP PROCEDURE IF EXISTS GetConfiguredSource;
+
 DELIMITER $$
 CREATE  PROCEDURE `GetConfiguredSource`(IN pSourceName VARCHAR(128), IN pHandleIds VARCHAR(128) )
 BEGIN
@@ -2373,6 +2516,9 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS GetFreeUsers;
+
+
 DELIMITER $$
 CREATE  PROCEDURE `GetFreeUsers`()
 BEGIN
@@ -2383,6 +2529,8 @@ BEGIN
 	where b.level_id < 2;
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS GetLogoLinkToUpdate;
 
 DELIMITER $$
 CREATE  PROCEDURE `GetLogoLinkToUpdate`()
@@ -2419,6 +2567,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS GetModuleConfiguration;
+
 DELIMITER $$
 CREATE  PROCEDURE `GetModuleConfiguration`( pModuleName VARCHAR(128), pSubModuleName VARCHAR(128))
 BEGIN
@@ -2429,6 +2579,10 @@ BEGIN
 
 END$$
 DELIMITER ;
+
+
+DROP PROCEDURE IF EXISTS GetModuleConfigurationByType;
+
 
 DELIMITER $$
 CREATE  PROCEDURE `GetModuleConfigurationByType`( pModuleName VARCHAR(128), pSubModuleName VARCHAR(128), pTypeName VARCHAR(128))
@@ -2441,6 +2595,9 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS GetPaymentInfo;
+
+
 DELIMITER $$
 CREATE  PROCEDURE `GetPaymentInfo`(IN pUserId VARCHAR(128))
 BEGIN
@@ -2451,6 +2608,8 @@ BEGIN
     WHERE b.auth0UserId = pUserId;
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS GetPaymentList;
 
 DELIMITER $$
 CREATE  PROCEDURE `GetPaymentList`(IN pUserId VARCHAR(64))
@@ -2466,6 +2625,8 @@ BEGIN
     
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS GetSourceBlobInfo;
 
 DELIMITER $$
 CREATE  PROCEDURE `GetSourceBlobInfo`(IN pSourceName VARCHAR(128), IN pSourceHandle VARCHAR(128)  )
@@ -2493,6 +2654,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS GetUserAccountLevel;
+
 DELIMITER $$
 CREATE  PROCEDURE `GetUserAccountLevel`(IN pUserId VARCHAR(64))
 BEGIN
@@ -2506,6 +2669,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS GetUserMessages;
+
 DELIMITER $$
 CREATE  PROCEDURE `GetUserMessages`( IN pUserId VARCHAR(128))
 BEGIN
@@ -2516,6 +2681,8 @@ BEGIN
 	WHERE a.user_id = pUserId and b.deleted <> 1 order by a.id desc;
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS GetUserProfile;
 
 DELIMITER $$
 CREATE  PROCEDURE `GetUserProfile`(IN pUserId VARCHAR(128))
@@ -2551,6 +2718,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS InsertBrandSessionBlob;
+
 DELIMITER $$
 CREATE  PROCEDURE `InsertBrandSessionBlob`(IN pBrandKey VARCHAR(64), 
 															 IN pBrandSessionKey VARCHAR(64), 
@@ -2581,6 +2750,8 @@ BEGIN
 
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS InsertBrandSessionBlob2;
 
 DELIMITER $$
 CREATE  PROCEDURE `InsertBrandSessionBlob2`(IN pBrandKey VARCHAR(64), 
@@ -2620,6 +2791,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS MarkUserMessage;
+
 DELIMITER $$
 CREATE  PROCEDURE `MarkUserMessage`( IN pUserId VARCHAR(255), IN pMessageId INT(11), IN pIsRead bit(1))
 BEGIN
@@ -2634,6 +2807,9 @@ BEGIN
     SELECT * FROM UserMessage WHERE user_id = pUserId and msg_id = pMessageId;
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS NewBrandSession;
+
 
 DELIMITER $$
 CREATE  PROCEDURE `NewBrandSession`(IN pUserId VARCHAR(64), 
@@ -2703,6 +2879,9 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS ProvisionNewBrand;
+
+
 DELIMITER $$
 CREATE  PROCEDURE `ProvisionNewBrand`(IN pUserId VARCHAR(64), 
                                                                IN pBrandConfig json)
@@ -2763,6 +2942,9 @@ BEGIN
 
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS RegisterAccount;
+
 
 DELIMITER $$
 CREATE  PROCEDURE `RegisterAccount`(
@@ -2861,6 +3043,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS SaveBenchmarkScore;
+
 DELIMITER $$
 CREATE  PROCEDURE `SaveBenchmarkScore`(IN pBenchmarkId INT, IN pScoreType VARCHAR(32), IN pScoreJson json)
 BEGIN
@@ -2887,6 +3071,8 @@ BEGIN
 	
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS SaveBenchmarkSessionResult;
 
 DELIMITER $$
 CREATE  PROCEDURE `SaveBenchmarkSessionResult`(IN pBenchmarkId INT, IN pBenchmarkSessionId INT, IN pResult json, IN pScoreType VARCHAR(32))
@@ -2916,6 +3102,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS SaveBrandArchetypeGoal;
+
 DELIMITER $$
 CREATE  PROCEDURE `SaveBrandArchetypeGoal`(IN pBrandKey VARCHAR(64),
 																	IN pArchetypeGoal VARCHAR(32),
@@ -2939,6 +3127,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS SaveBrandArchetypeGoal2;
+
 DELIMITER $$
 CREATE  PROCEDURE `SaveBrandArchetypeGoal2`(IN pBrandId INT,
 																	IN pArchetypeGoal VARCHAR(32),
@@ -2957,6 +3147,8 @@ BEGIN
 
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS SaveBrandSessionArchetypeScore;
 
 DELIMITER $$
 CREATE  PROCEDURE `SaveBrandSessionArchetypeScore`(IN pSessionKey VARCHAR(64), IN pScoreType VARCHAR(32), IN pScoreJson json)
@@ -2995,6 +3187,8 @@ BEGIN
 	
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS SaveBrandSessionResult;
 
 DELIMITER $$
 CREATE  PROCEDURE `SaveBrandSessionResult`(IN pBrandSessionKey VARCHAR(64), IN pResultType VARCHAR(32), IN pResultJson json)
@@ -3040,6 +3234,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS UpdateBenchmark;
+
 DELIMITER $$
 CREATE  PROCEDURE `UpdateBenchmark`(IN pBrandKey VARCHAR(64),
 															 IN pBenchmarkKey VARCHAR(64), 
@@ -3063,6 +3259,8 @@ BEGIN
  
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS UpdateBenchmarkConfig;
 
 DELIMITER $$
 CREATE  PROCEDURE `UpdateBenchmarkConfig`(IN pBrandKey VARCHAR(64),
@@ -3088,6 +3286,8 @@ BEGIN
  
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS UpdateBenchmarkInfo;
 
 DELIMITER $$
 CREATE  PROCEDURE `UpdateBenchmarkInfo`(IN pBrandId INT,
@@ -3116,6 +3316,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS UpdateBenchmarkStatus;
+
 DELIMITER $$
 CREATE  PROCEDURE `UpdateBenchmarkStatus`(
 	IN pBenchmarkId INT,
@@ -3132,6 +3334,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS UpdateBrandInfo;
+
 DELIMITER $$
 CREATE  PROCEDURE `UpdateBrandInfo`(
 	IN pBrandId INT,
@@ -3147,6 +3351,8 @@ BEGIN
         
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS UpdateBrandSessionConfig;
 
 DELIMITER $$
 CREATE  PROCEDURE `UpdateBrandSessionConfig`(
@@ -3170,6 +3376,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS UpdateBrandSessionStatus;
+
 DELIMITER $$
 CREATE  PROCEDURE `UpdateBrandSessionStatus`(
 	IN pBrandId INT,
@@ -3189,6 +3397,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS UpdateBrandSessionStatusByKey;
+
 DELIMITER $$
 CREATE  PROCEDURE `UpdateBrandSessionStatusByKey`(
 	IN pBrandKey VARCHAR(64),
@@ -3207,6 +3417,8 @@ BEGIN
         
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS UpdateBrandSessionTaskStatus;
 
 DELIMITER $$
 CREATE  PROCEDURE `UpdateBrandSessionTaskStatus`(
@@ -3232,6 +3444,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS UpdateBrandSetupRequestListStatus;
+
 DELIMITER $$
 CREATE  PROCEDURE `UpdateBrandSetupRequestListStatus`(IN pRequestIdList TEXT, IN newStatus  tinyint(1))
 BEGIN
@@ -3245,6 +3459,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS UpdateBrandSetupRequestStatus;
+
 DELIMITER $$
 CREATE  PROCEDURE `UpdateBrandSetupRequestStatus`(IN pRequestId INT, IN newStatus  tinyint)
 BEGIN
@@ -3257,6 +3473,8 @@ BEGIN
 
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS UpdateInterstitialCount;
 
 DELIMITER $$
 CREATE  PROCEDURE `UpdateInterstitialCount`(
@@ -3281,6 +3499,8 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS UpdatePayment;
+
 DELIMITER $$
 CREATE  PROCEDURE `UpdatePayment`(
   IN pPaymentMethodId VARCHAR(64),
@@ -3296,6 +3516,8 @@ BEGIN
         
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS UpdateUserAccountLevel;
 
 DELIMITER $$
 CREATE  PROCEDURE `UpdateUserAccountLevel`(
@@ -3324,6 +3546,8 @@ BEGIN
 
 END$$
 DELIMITER ;
+
+DROP PROCEDURE IF EXISTS UpdateUserProfileInfo;
 
 DELIMITER $$
 CREATE  PROCEDURE `UpdateUserProfileInfo`(
@@ -3368,10 +3592,12 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS UpsertBrandLogo;
+
 DELIMITER $$
 CREATE  PROCEDURE `UpsertBrandLogo`(IN pBrandId INT, 
-                                                             IN pBrandLogoUrl varchar(1024)
-                                                             )
+                                    IN pBrandLogoUrl varchar(1024)
+                                    )
 BEGIN
 	
     
@@ -3387,10 +3613,12 @@ BEGIN
 END$$
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS UpsertNewContentSource;
+
 DELIMITER $$
 CREATE  PROCEDURE `UpsertNewContentSource`( 
-                                                             IN pSourceHandle VARCHAR(128),
-                                                             IN pSourceType VARCHAR(128))
+									IN pSourceHandle VARCHAR(128),
+									IN pSourceType VARCHAR(128))
 BEGIN
 	
 	set@src_type_id = (select Id from ChannelType where name = pSourceType );
