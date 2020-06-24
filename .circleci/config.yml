@@ -90,6 +90,10 @@ jobs:
       stage:
         type: string
 
+      serverName:
+        type: string
+        default: blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com
+
       dbName:
         type: string
         default: aidentityprod
@@ -141,19 +145,18 @@ jobs:
 
       - run:
           name: Mysql database
-          command: mysql  -h blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com -u blueoceansa -pSecur3!! -e "create database IF NOT EXISTS <<parameters.dbName>>;"
+          command: mysql  -h <<parameters.serverName>> -u blueoceansa -p$DB_PASSWORD_<<parameters.stage>> -e "create database IF NOT EXISTS <<parameters.dbName>>;"
 
       - run: 
           command: |
-            flyway -url=jdbc:mysql://blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com:3306/<<parameters.dbName>> -locations=filesystem:./flyway_scripts/src -user=blueoceansa -password=Secur3!! migrate  
-
+            flyway -url=jdbc:mysql://<<parameters.serverName>>:3306/<<parameters.dbName>> -locations=filesystem:./flyway_scripts/src -user=blueoceansa -password=$DB_PASSWORD_<<parameters.stage>> migrate  
 
       - run: 
           command: |
-            flyway -url=jdbc:mysql://blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com:3306 -schemas=<<parameters.dbName>> -user=blueoceansa -password=Secur3!! info  
+            flyway -url=jdbc:mysql://<<parameters.serverName>>:3306 -schemas=<<parameters.dbName>> -user=blueoceansa -password=$DB_PASSWORD_<<parameters.stage>> info  
 
       - run:
-          command: mysql  -h blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com -u blueoceansa -pSecur3!!  -e "use <<parameters.dbName>>; select * from AccountLevel;"
+          command: mysql  -h <<parameters.serverName>> -u blueoceansa -p$DB_PASSWORD_<<parameters.stage>>  -e "use <<parameters.dbName>>; select * from AccountLevel;"
 
 
       # - run:
