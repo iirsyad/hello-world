@@ -93,7 +93,7 @@ jobs:
 
       serverName:
         type: string
-        default: blueocean-dev3-db-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com
+        default: blueocean-dev-db-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com
 
       dbName:
         type: string

@@ -4,8 +4,6 @@ CREATE TABLE IF NOT EXISTS `Account` (
   `name` varchar(128) DEFAULT NULL,
   `level_id` smallint(6) DEFAULT '1',
   `is_active` bit(1) DEFAULT b'1',
-  `created` datetime DEFAULT CURRENT_TIMESTAMP,
-  `modified` datetime DEFAULT CURRENT_TIMESTAMP,
   `create_date` datetime DEFAULT CURRENT_TIMESTAMP,
   `modified_date` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
