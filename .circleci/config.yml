@@ -154,7 +154,7 @@ jobs:
 
       - run: 
           command: |
-            flyway -url=jdbc:mysql://<<parameters.serverName>>:3306/<<parameters.dbName>> -locations=filesystem:./flyway_scripts/src -user=blueoceansa -password=$DB_PASSWORD_<<parameters.stage>> migrate  
+            flyway -url=jdbc:mysql://<<parameters.serverName>>:3306/<<parameters.dbName>> -locations=filesystem:./flyway_scripts/src -user=blueoceansa -password=$DB_PASSWORD_<<parameters.stage>> -baselineOnMigrate=true migrate  
 
       - run: 
           command: |
