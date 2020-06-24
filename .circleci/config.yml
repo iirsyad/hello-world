@@ -89,14 +89,19 @@ jobs:
     parameters:
       stage:
         type: string
+        default: stage
 
       serverName:
         type: string
-        default: blueocean-au-dev-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com
+        default: blueocean-dev3-db-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com
 
       dbName:
         type: string
-        default: aidentityprod
+        default: blueocean
+
+      sgId:
+        type: string
+        default: sg-04ee700a973f11ef4
 
     # executor: python/default
     docker:
@@ -139,7 +144,7 @@ jobs:
           command: |
             public_ip_address=$(wget -qO- http://checkip.amazonaws.com)
             echo "this computers public ip address is $public_ip_address"
-            aws ec2 authorize-security-group-ingress --region us-west-2 --group-id sg-04ee700a973f11ef4 --ip-permissions "[{\"IpProtocol\": \"tcp\", \"FromPort\": 	3306, \"ToPort\": 	3306, \"IpRanges\": [{\"CidrIp\": \"${public_ip_address}/32\"}]}]"
+            aws ec2 authorize-security-group-ingress --region us-west-2 --group-id <<parameters.sgId>> --ip-permissions "[{\"IpProtocol\": \"tcp\", \"FromPort\": 	3306, \"ToPort\": 	3306, \"IpRanges\": [{\"CidrIp\": \"${public_ip_address}/32\"}]}]"
 
       - run: aws --version
 
