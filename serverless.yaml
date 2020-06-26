@@ -1,0 +1,1285 @@
+
+  
+# =============================================================================================
+# AWS prep deployment
+# =============================================================================================
+# NOTE 0: FOR AWS ACCOUNT, NEED TO CREATE SUPPORT CASE TO INCREASE ELASTIC IP ADDRESSES FROM THE 
+#         DEFAULT 5 TO 12 (THIS DEPLOYMENT NEEDS 3X3=9).
+# NOTE 1: TO COPY THIS DEPLOYMENT, REPLACE THE TEXT "blueocean", AND "bo" IN THE ElastiCacheCluster 
+#         SECTION. AWS DOES NOT ALLOW MORE THAN 20 CHARACTERS IN THE CACHE CLUSTER IDENTIFIER!
+#         ClusterName: bo-${opt:stage}-redis
+# NOTE 2: DEPLOY master, THEN COMMENT OUT THE FOLLOWING PARTS FOR stage AND prod DEPLOYMENT:
+#          1). S3PbixRepoBucket
+#          2). S3PublicAssetsBucket
+#          3). Cognito
+#         THE REASON IS: THE SAME RESOURCE CANNOT BE UPDATED ACROSS CLOUDFORMATION STACKS.
+# NOTE 3: THE DYNAMODB TABLE AND LAMBDA FUNCTION IN THIS serverless.yaml ARE FOR TESTING ONLY. FREE TO DELETE.
+
+# You configure the additional profiles in AWS credentials with (using serverless_admin as an example):
+#     $ aws configure --profile blueocean
+#       AWS Access Key ID [****************WOGQ]: 
+#       AWS Secret Access Key [****************FZPi]: 
+#       Default region name [None]: us-west-2
+#       Default output format [None]: 
+# And you deploy with that profile:
+#     $ AWS_PROFILE=blueocean serverless deploy
+# And you invoke the same way:
+#     $ AWS_PROFILE=blueocean serverless invoke --function <function name>
+
+# ./node_modules/.bin/serverless invoke local -f DynamoDBStreamExampleHandler --data {}
+# AWS_PROFILE=blueocean ./node_modules/.bin/serverless deploy
+# AWS_PROFILE=blueocean ./node_modules/.bin/serverless remove
+
+# =============================================================================================
+# service: THE CLOUDFORMATION STACK NAME WILL BE {service}-{stage}
+#    AWS_PROFILE=blueocean serverless deploy --stage master
+#    [ISSUE] Stack with id blueocean-prep-master does not exist
+#    [FIX] Manually create a stack with the same ID 
+# =============================================================================================
+service: blueocean-prep    
+
+custom:
+  accountId: '905909050882'
+  appConfig: ${file(./appConfig.yml)}
+  appStageConfig: ${self:custom.appConfig.stage.${opt:stage}}
+  cloudFrontOriginId: 'Default Origin'
+  # s3DataBucketName: blueocean-${opt:stage}-data
+  # s3DataBucketNameFlat: blueocean${opt:stage}data
+  # s3DataBucketArn: arn:aws:s3:::blueocean-${opt:stage}-data
+  # s3ClientAssetsBucketName: blueocean-${opt:stage}-app
+  # s3ClientAssetsBucketArn: arn:aws:s3:::blueocean-${opt:stage}-app
+
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+
+  region: ${self:custom.appStageConfig.awsRegion}
+
+  # =============================================================================================
+  # deploymentBucket: needs to pre-exist
+  # aws s3 mb s3://blueocean-prep-deployment-us-west-2 --profile blueocean --region us-west-2
+  # =============================================================================================
+  deploymentBucket: blueocean-prep-deployment-us-west-2
+
+  versionFunctions: false
+
+# package:
+#   include:
+#    - DynamoDBStreamExampleHandler.ts
+#   exclude:
+#    - node_modules/**/*
+
+resources:
+  Resources:
+
+    # =============================================================================================
+    # VPC, InternetGateway, VPCGatewayAttachment, SecurityGroup
+    # =============================================================================================
+    VPC:
+      Type: AWS::EC2::VPC
+      Properties:
+        CidrBlock: ${self:custom.appStageConfig.vpcCidr}
+        EnableDnsSupport: true
+        EnableDnsHostnames: true
+        Tags:
+          - Key: Name
+            Value: !Sub blueocean ${opt:stage} VPC
+
+    InternetGateway:
+      Type: AWS::EC2::InternetGateway
+      Properties:
+        Tags:
+          - Key: Name
+            Value: !Sub blueocean ${opt:stage} IGW
+    InternetGatewayAttachment:
+      Type: AWS::EC2::VPCGatewayAttachment
+      Properties:
+        InternetGatewayId: !Ref InternetGateway
+        VpcId: !Ref VPC
+
+    VPCSecurityGroup:
+      DependsOn: VPC
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        # CloudFormation cannot update a stack when a custom-named resource requires replacing. 
+        # GroupName: !Sub blueocean-${opt:stage}-VPC-SG
+        GroupDescription: VPC security group
+        VpcId: !Ref VPC
+        Tags:
+          - Key: Name
+            Value: !Sub blueocean ${opt:stage} SG
+
+    # =============================================================================================
+    # Public Subnets, EIP, NatGateway, RouteTable, Route, SubnetRouteTableAssociation
+    # =============================================================================================
+    PublicSubnetA:
+      DependsOn: VPC
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref VPC
+        AvailabilityZone: !Select [0, !GetAZs '']
+        CidrBlock: ${self:custom.appStageConfig.publicSubnetACidr}
+        MapPublicIpOnLaunch: true
+        Tags:
+          - Key: Name
+            Value: !Sub blueocean ${opt:stage} public A
+
+    PublicSubnetB:
+      DependsOn: VPC
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref VPC
+        AvailabilityZone: !Select [1, !GetAZs '']
+        CidrBlock: ${self:custom.appStageConfig.publicSubnetBCidr}
+        MapPublicIpOnLaunch: true
+        Tags:
+          - Key: Name
+            Value: !Sub blueocean ${opt:stage} public B
+
+    PublicSubnetC:
+      DependsOn: VPC
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref VPC
+        AvailabilityZone: !Select [2, !GetAZs '']
+        CidrBlock: ${self:custom.appStageConfig.publicSubnetCCidr}
+        MapPublicIpOnLaunch: true
+        Tags:
+          - Key: Name
+            Value: !Sub blueocean ${opt:stage} public C
+
+    # RouteTable and Route with InternetGateway
+    # NOTE: We are sharing this route table with all 3 public subnets.
+    #       It is fine for each public subnet to have a different route table (like the private subnets)
+    PublicRouteTable:
+      Type: AWS::EC2::RouteTable
+      Properties:
+        VpcId: !Ref VPC
+    PublicRoute:
+      DependsOn: InternetGatewayAttachment
+      Type: AWS::EC2::Route
+      Properties:
+        RouteTableId: !Ref PublicRouteTable
+        GatewayId: !Ref InternetGateway
+        DestinationCidrBlock: 0.0.0.0/0
+
+    NatGatewayAEIP:
+      DependsOn: InternetGatewayAttachment
+      Type: AWS::EC2::EIP
+      Properties:
+        Domain: vpc
+    NatGatewayA:
+      Type: AWS::EC2::NatGateway
+      Properties:
+        AllocationId: !GetAtt NatGatewayAEIP.AllocationId
+        SubnetId: !Ref PublicSubnetA
+    PublicSubnetARouteTableAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        RouteTableId: !Ref PublicRouteTable
+        SubnetId: !Ref PublicSubnetA
+
+    NatGatewayBEIP:
+      DependsOn: InternetGatewayAttachment
+      Type: AWS::EC2::EIP
+      Properties:
+        Domain: vpc
+    NatGatewayB:
+      Type: AWS::EC2::NatGateway
+      Properties:
+        AllocationId: !GetAtt NatGatewayBEIP.AllocationId
+        SubnetId: !Ref PublicSubnetB
+    PublicSubnetBRouteTableAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        RouteTableId: !Ref PublicRouteTable
+        SubnetId: !Ref PublicSubnetB
+
+    # ISSUE: The maximum number of addresses has been reached. (Support case: Elastic IPs limit from 5 to 10)
+    NatGatewayCEIP:      
+      DependsOn: InternetGatewayAttachment
+      Type: AWS::EC2::EIP
+      Properties:
+        Domain: vpc
+    NatGatewayC:
+      Type: AWS::EC2::NatGateway
+      Properties:
+        AllocationId: !GetAtt NatGatewayCEIP.AllocationId   
+        SubnetId: !Ref PublicSubnetC
+    PublicSubnetCRouteTableAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        RouteTableId: !Ref PublicRouteTable
+        SubnetId: !Ref PublicSubnetC
+
+    # =============================================================================================
+    # Lambda Subnets, RouteTable, Route, SubnetRouteTableAssociation
+    # =============================================================================================
+    LambdaSubnetA:
+      DependsOn: VPC
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref VPC
+        AvailabilityZone: !Select [0, !GetAZs '']
+        CidrBlock: ${self:custom.appStageConfig.lambdaSubnetACidr}
+        MapPublicIpOnLaunch: false
+        Tags:
+          - Key: Name
+            Value: !Sub blueocean ${opt:stage} lambda A
+
+    LambdaSubnetB:
+      DependsOn: VPC
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref VPC
+        AvailabilityZone: !Select [1, !GetAZs '']
+        CidrBlock: ${self:custom.appStageConfig.lambdaSubnetBCidr}
+        MapPublicIpOnLaunch: false
+        Tags:
+          - Key: Name
+            Value: !Sub blueocean ${opt:stage} lambda B
+
+    LambdaSubnetC:
+      DependsOn: VPC
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref VPC
+        AvailabilityZone: !Select [2, !GetAZs '']
+        CidrBlock: ${self:custom.appStageConfig.lambdaSubnetCCidr}
+        MapPublicIpOnLaunch: false
+        Tags:
+          - Key: Name
+            Value: !Sub blueocean ${opt:stage} lambda C
+
+    LambdaRouteTableA:
+      Type: AWS::EC2::RouteTable
+      Properties:
+        VpcId: !Ref VPC        
+    LambdaRouteA:
+      Type: AWS::EC2::Route
+      Properties:
+        RouteTableId: !Ref LambdaRouteTableA
+        NatGatewayId: !Ref NatGatewayA
+        DestinationCidrBlock: 0.0.0.0/0
+    LambdaSubnetARouteTableAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        RouteTableId: !Ref LambdaRouteTableA
+        SubnetId: !Ref LambdaSubnetA
+
+    LambdaRouteTableB:
+      Type: AWS::EC2::RouteTable
+      Properties:
+        VpcId: !Ref VPC        
+    LambdaRouteB:
+      Type: AWS::EC2::Route
+      Properties:
+        RouteTableId: !Ref LambdaRouteTableB
+        NatGatewayId: !Ref NatGatewayB
+        DestinationCidrBlock: 0.0.0.0/0
+    LambdaSubnetBRouteTableAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        RouteTableId: !Ref LambdaRouteTableB
+        SubnetId: !Ref LambdaSubnetB
+
+    LambdaRouteTableC:
+      Type: AWS::EC2::RouteTable
+      Properties:
+        VpcId: !Ref VPC        
+    LambdaRouteC:
+      Type: AWS::EC2::Route
+      Properties:
+        RouteTableId: !Ref LambdaRouteTableC
+        NatGatewayId: !Ref NatGatewayC
+        DestinationCidrBlock: 0.0.0.0/0
+    LambdaSubnetCRouteTableAssociation:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        RouteTableId: !Ref LambdaRouteTableC
+        SubnetId: !Ref LambdaSubnetC
+
+    # =============================================================================================
+    # ElastiCache Cluster
+    # =============================================================================================
+    # ElastiCacheSecurityGroup:
+    #   DependsOn: 
+    #     - VPC
+    #     - VPCSecurityGroup
+    #   Type: AWS::EC2::SecurityGroup
+    #   Properties:
+    #     # GroupName: !Sub blueocean-${opt:stage}-redis-SG
+    #     GroupDescription: Ingress for Redis cluster
+    #     VpcId: !Ref VPC
+    #     SecurityGroupIngress:
+    #       - IpProtocol: tcp
+    #         FromPort: '6379'
+    #         ToPort: '6379'
+    #         SourceSecurityGroupId: !Ref VPCSecurityGroup
+    #     Tags:
+    #       - Key: Name
+    #         Value: !Sub blueocean ${opt:stage} ElastiCache SG
+
+    # ElastiCacheSubnetGroup:
+    #   DependsOn: 
+    #     - LambdaSubnetA
+    #     - LambdaSubnetB
+    #     - LambdaSubnetC
+    #   Type: AWS::ElastiCache::SubnetGroup
+    #   Properties:
+    #     # If you specify a name, you cannot perform updates that require replacement of this resource. 
+    #     # You can perform updates that require no or some interruption. 
+    #     # If you must replace the resource, specify a new name.
+    #     CacheSubnetGroupName: !Sub blueocean-${opt:stage}-redis-SubnetGroup
+    #     Description: Cache subnet group
+    #     SubnetIds:
+    #       - Ref: LambdaSubnetA
+    #       - Ref: LambdaSubnetB
+    #       - Ref: LambdaSubnetC
+    #     #Tags:    # Encountered unsupported property Tags.
+    #     #  - Key: Name
+    #     #    Value: !Sub blueocean ${opt:stage} subnet group
+
+    # ElastiCacheCluster:
+    #   DependsOn: 
+    #     - ElastiCacheSecurityGroup
+    #     - ElastiCacheSubnetGroup
+    #   Type: AWS::ElastiCache::CacheCluster
+    #   Properties:
+    #     # CloudFormation cannot update a stack when a custom-named resource requires replacing. 
+    #     # Rename blueocean-master-redis and update the stack again.
+    #     # ISSUE: ElastiCacheCluster - The parameter CacheClusterIdentifier is not a valid identifier because it is longer than 20 characters.
+    #     ClusterName: bo-${opt:stage}-redis
+    #     CacheNodeType: ${self:custom.appStageConfig.cacheNodeType}
+    #     Engine: redis
+    #     NumCacheNodes: ${self:custom.appStageConfig.numCacheNodes} #CacheCluster - NumCacheNodes should be 1 if engine is redis. (initial)
+    #     PreferredMaintenanceWindow: sun:01:00-sun:02:00
+    #     VpcSecurityGroupIds:
+    #       - Fn::GetAtt: ElastiCacheSecurityGroup.GroupId
+    #     CacheSubnetGroupName: !Ref ElastiCacheSubnetGroup
+    #     Tags:
+    #       - Key: Name
+    #         Value: !Sub blueocean ${opt:stage} redis
+
+    # # =============================================================================================
+    # # CloudWatch LogGroup and LogStream for monitoring
+    # # =============================================================================================
+    # EventMonitorLogGroup:
+    #   Type: AWS::Logs::LogGroup
+    #   Properties:
+    #     LogGroupName: ${self:custom.appStageConfig.eventMonitorLogGroup}
+    #     # RetentionInDays: Integer
+
+    # EventMonitorTraceStream:
+    #   DependsOn:
+    #     - EventMonitorLogGroup
+    #   Type: AWS::Logs::LogStream
+    #   Properties: 
+    #     LogGroupName: ${self:custom.appStageConfig.eventMonitorLogGroup}
+    #     LogStreamName: ${self:custom.appStageConfig.eventMonitorTraceStream}
+
+    # EventMonitorErrorStream:
+    #   DependsOn:
+    #     - EventMonitorLogGroup
+    #   Type: AWS::Logs::LogStream
+    #   Properties: 
+    #     LogGroupName: ${self:custom.appStageConfig.eventMonitorLogGroup}
+    #     LogStreamName: ${self:custom.appStageConfig.eventMonitorErrorStream}
+
+    # =============================================================================================
+    # S3 Bucket: blueocean-public-assets
+    # =============================================================================================
+    #S3ClientAssetsBucket:
+    #  Type: AWS::S3::Bucket
+    #  Properties:
+    #    BucketName: ${self:custom.s3PublicAssetsBucketName}
+    #    AccessControl: PublicRead
+    #    CorsConfiguration:
+    #      CorsRules:
+    #      - AllowedOrigins:
+    #        - '*'
+    #        AllowedMethods:
+    #        - GET
+    #        - HEAD
+    #        AllowedHeaders:
+    #        - '*'
+
+    # =============================================================================================
+    # S3 Bucket: blueocean-pbix-repo
+    # =============================================================================================
+    #S3PbixRepoBucket:
+    #  Type: AWS::S3::Bucket
+    #  #DeletionPolicy: Retain   # Preserve resource when its stack is deleted. Able to modify resources outside of AWS CloudFormation
+    #  Properties:
+    #    BucketName: ${self:custom.appConfig.powerBiPbixBucket}   #blueocean-pbix-repo        
+    #    AccessControl: Private
+
+    # IAMPbixRepoManagerGroup:
+    #   Type: AWS::IAM::Group
+    #   #DeletionPolicy: Retain 
+    #   Properties:
+    #     GroupName: !Sub ${self:custom.appConfig.powerBiPbixBucket}_${opt:stage}_manager  # blueocean-pbix-repo_prod_manager
+
+    # IAMPbixRepoManagerPolicy:
+    #   DependsOn:
+    #   - IAMPbixRepoManagerGroup
+    #   Type: AWS::IAM::Policy
+    #   #DeletionPolicy: Retain 
+    #   Properties:
+    #     PolicyName: !Sub ${opt:stage}_files # prod_files
+    #     PolicyDocument:
+    #       Version: '2012-10-17'
+    #       Statement:
+    #       - Effect: Allow
+    #         Action: 
+    #         - s3:ListAllMyBuckets
+    #         Resource: 
+    #         - arn:aws:s3:::*
+    #       - Effect: Allow
+    #         Action:
+    #         - s3:ListBucket
+    #         - s3:GetBucketLocation
+    #         Resource:
+    #         - !Sub arn:aws:s3:::${self:custom.appConfig.powerBiPbixBucket}  # arn:aws:s3:::blueocean-pbix-repo
+    #       - Effect: Allow
+    #         Action:
+    #         - s3:GetObject
+    #         - s3:PutObject
+    #         Resource:
+    #         - !Sub arn:aws:s3:::${self:custom.appConfig.powerBiPbixBucket}/*/${opt:stage}  # arn:aws:s3:::blueocean-pbix-repo/*/prod 
+    #       - Effect: Allow
+    #         Action:
+    #         - s3:GetObject
+    #         - s3:PutObject
+    #         - s3:DeleteObject
+    #         Resource:
+    #         - !Sub arn:aws:s3:::${self:custom.appConfig.powerBiPbixBucket}/*/${opt:stage}/*.pbix  # arn:aws:s3:::blueocean-pbix-repo/*/prod/*.pbix
+    #     Groups: 
+    #     - Ref: IAMPbixRepoManagerGroup
+
+## IAM POLICY: prod_files
+##{
+##  "Version": "2012-10-17",
+##  "Statement": [
+##    {
+##      "Effect": "Allow",
+##      "Action": [
+##        "s3:ListAllMyBuckets"
+##      ],
+##      "Resource": [
+##        "arn:aws:s3:::*"
+##      ]
+##    },
+##    {
+##      "Effect": "Allow",
+##      "Action": [
+##        "s3:ListBucket",
+##        "s3:GetBucketLocation"
+##      ],
+##      "Resource": [
+##        "arn:aws:s3:::cemx-pbix-repo"
+##      ]
+##    },
+##    {
+##      "Effect": "Allow",
+##      "Action": [
+##        "s3:DeleteObject",
+##        "s3:GetObject",
+##        "s3:PutObject"
+##      ],
+##      "Resource": [
+##        "arn:aws:s3:::cemx-pbix-repo/*/prod/*.pbix"
+##      ]
+##    },
+##    {
+##      "Effect": "Allow",
+##      "Action": [
+##        "s3:GetObject",
+##        "s3:PutObject"
+##      ],
+##      "Resource": [
+##        "arn:aws:s3:::cemx-pbix-repo/*/prod"
+##      ]
+##    }
+##  ]
+##}
+
+    # =============================================================================================
+    # SNS
+    # =============================================================================================
+    # CachePrimingSNSTopic:
+    #   Type: AWS::SNS::Topic
+    #   Properties:
+    #     TopicName: cache-${opt:stage}-priming
+    #     DisplayName: cache-${opt:stage}-priming Topic
+
+    # RapportErrorSNSTopic:
+    #   Type: AWS::SNS::Topic
+    #   Properties:
+    #     TopicName: blueoceanerror-${opt:stage}-topic
+    #     DisplayName: blueoceanerror-${opt:stage}-topic
+    #     Subscription:
+    #     - Endpoint: 'xiangz@rapport365.com'
+    #       Protocol: email
+    #     - Endpoint: 'ichadi@rapport365.com'
+    #       Protocol: email
+
+
+#    # =============================================================================================
+#    # Cognito: blueocean-test-user-pool
+#    # =============================================================================================
+#    # The role used by cognito to send sms messages.
+#    CognitoSmsSendIamRole:
+#      Type: AWS::IAM::Role
+#      Properties:
+#        RoleName: blueocean-test-user-CognitoSmsSendIamRole
+#        AssumeRolePolicyDocument:
+#          Version: '2012-10-17'
+#          Statement:
+#          - Sid: ''
+#            Effect: 'Allow'
+#            Principal:
+#              Service: 'cognito-idp.amazonaws.com'
+#            Action: 'sts:AssumeRole'
+#            Condition:
+#              StringEquals:
+#                sts:ExternalId: 0a3ac948-0400-4a23-a43d-d2dbf5952310 # Random ID used to link cognito with SMS sending
+#        Policies:
+#        - PolicyName: blueocean-test-user-CognitoSmsSendPolicy
+#          PolicyDocument:
+#            Version: '2012-10-17'
+#            Statement:
+#            - Effect: 'Allow'
+#              Action:
+#              - 'sns:publish'
+#              Resource:
+#              - '*'
+#
+#    # The cognito user pool used for all app authentication
+#    CognitoUserPool:
+#      Type: AWS::Cognito::UserPool
+#      DependsOn:
+#      - CognitoSmsSendIamRole
+#      Properties:
+#        AdminCreateUserConfig:
+#          AllowAdminCreateUserOnly: false
+#        AliasAttributes:
+#        - email
+#        AutoVerifiedAttributes:
+#        - email
+#        DeviceConfiguration:
+#          ChallengeRequiredOnNewDevice: true
+#        #LambdaConfig:
+#        #  PreAuthentication:
+#        #    Fn::GetAtt: CognitoTriggerPreAuthHandlerLambdaFunction.Arn
+#        #  PostAuthentication:
+#        #    Fn::GetAtt: CognitoTriggerPostAuthHandlerLambdaFunction.Arn
+#        #  DefineAuthChallenge:
+#        #    Fn::GetAtt: CognitoTriggerAuthChallengeDefineHandlerLambdaFunction.Arn
+#        #  CreateAuthChallenge:
+#        #    Fn::GetAtt: CognitoTriggerAuthChallengeCreateHandlerLambdaFunction.Arn
+#        #  VerifyAuthChallengeResponse:
+#        #    Fn::GetAtt: CognitoTriggerAuthChallengeVerifyHandlerLambdaFunction.Arn
+#        #  PreSignUp:
+#        #    Fn::GetAtt: CognitoTriggerPreSignupHandlerLambdaFunction.Arn
+#        EmailConfiguration:
+#          ReplyToEmailAddress: noreply@app.blueocean.com
+#        MfaConfiguration: OPTIONAL
+#        Policies:
+#          PasswordPolicy:
+#            MinimumLength: 8
+#            RequireLowercase: true
+#            RequireNumbers: true
+#            RequireSymbols: true
+#            RequireUppercase: true
+#        UserPoolName: blueocean-test-user-pool
+#        # DO NOT ADD/MODIFY ANY OF THESE SCHEMA ATTRIBUTES!!!!!
+#        # Changing any of these attributes results in the entire use pool and all data being
+#        # removed and a new user pool being created. There isn't really a reliable solution to
+#        # the problem. So we keep the necessary user data on our server and have the login page
+#        # transparently login/register just in case the user pool is wiped out.
+#        # BE SUPER CAREFUL!!!!
+#        Schema:
+#        - Name: email
+#          Required: true
+#        - AttributeDataType: String
+#          Mutable: true
+#          Name: metaData
+#          StringAttributeConstraints:
+#            MaxLength: 2048
+#            MinLength: 0
+#          Required: false
+#        - AttributeDataType: String
+#          Mutable: true
+#          Name: firstName
+#          StringAttributeConstraints:
+#            MaxLength: 64
+#            MinLength: 1
+#        - AttributeDataType: String
+#          Mutable: true
+#          Name: lastName
+#          StringAttributeConstraints:
+#            MaxLength: 64
+#            MinLength: 1
+#        - AttributeDataType: String
+#          Mutable: true
+#          Name: username
+#          StringAttributeConstraints:
+#            MaxLength: 256
+#            MinLength: 1
+#        SmsConfiguration:
+#          ExternalId: 0a3ac948-0400-4a23-a43d-d2dbf5952310 # Random ID used to link cognito with SMS sending
+#          SnsCallerArn:
+#            Fn::GetAtt: CognitoSmsSendIamRole.Arn
+#    
+#    # The IAM role that cognito users who are in the app admin group have access to.
+#    CognitoAppAdminRole:
+#      Type: AWS::IAM::Role
+#      Properties:
+#        RoleName: blueocean-test-user-CognitoAppAdminRole
+#        AssumeRolePolicyDocument:
+#          Version: '2012-10-17'
+#          Statement:
+#          - Effect: Allow
+#            Principal:
+#              Federated: 'cognito-identity.amazonaws.com'
+#            Action: 'sts:AssumeRoleWithWebIdentity'
+#            Condition:
+#              StringEquals:
+#                cognito-identity.amazonaws.com:aud:
+#                  Ref: CognitoIdentityPool
+#              ForAnyValue:StringLike:
+#                cognito-identity.amazonaws.com:amr: 'authenticated'
+#        #Policies:
+#        #- PolicyName: blueocean-test-user-CognitoAppAdminRolePolicy
+#        #  PolicyDocument:
+#        #    Version: '2012-10-17'
+#        #    Statement:
+#        #    - Effect: Allow
+#        #      Action:
+#        #      - 's3:PutObject'
+#        #      - 's3:GetObject'
+#        #      Resource:
+#        #      - ${self:custom.s3DataBucketArn}/ml-data/*
+#        #      - ${self:custom.s3DataBucketArn}/public/*
+#
+#    # A user group that identifies the app admins for the app. It also has specific permissions to
+#    # other AWS resources.
+#    CognitoAppAdminUserGroup:
+#      Type: AWS::Cognito::UserPoolGroup
+#      DependsOn:
+#      - CognitoAppAdminRole
+#      Properties:
+#        GroupName: AppAdmin
+#        Precedence: 0
+#        UserPoolId:
+#          Ref: CognitoUserPool
+#        RoleArn:
+#          Fn::GetAtt: CognitoAppAdminRole.Arn
+#
+#    # The client app that uses our user pool.
+#    CognitoUserPoolClient:
+#      Type: AWS::Cognito::UserPoolClient
+#      Properties:
+#        ClientName: "blueocean App"
+#        GenerateSecret: false
+#        RefreshTokenValidity: 30
+#        UserPoolId:
+#          Ref: CognitoUserPool
+#        ReadAttributes:
+#        - email
+#        - "custom:metaData"
+#        - "custom:firstName"
+#        - "custom:lastName"
+#        - "custom:username"
+#        WriteAttributes:
+#        - email
+#        - "custom:metaData"
+#        - "custom:firstName"
+#        - "custom:lastName"
+#        - "custom:username"
+#
+#    # The identity pool AWS uses to work with Cognito. Without this, cognito user
+#    # policies will not be mapped to IAM and thus no access will be given to cognito users.
+#    CognitoIdentityPool:
+#      Type: AWS::Cognito::IdentityPool
+#      DependsOn:
+#      - CognitoUserPoolClient
+#      - CognitoUserPool
+#      Properties:
+#        IdentityPoolName: blueoceantestuserIdentityPool
+#        AllowUnauthenticatedIdentities: true
+#        CognitoIdentityProviders:
+#        - ClientId:
+#            Ref: CognitoUserPoolClient
+#          ProviderName:
+#            Fn::GetAtt:
+#            - CognitoUserPool
+#            - ProviderName
+#
+#    # The role authenticated cognito users have when interacting with AWS resources.
+#    CognitoAuthenticatedUserRole:
+#      Type: AWS::IAM::Role
+#      DependsOn:
+#      - CognitoIdentityPool
+#      Properties:
+#        RoleName: blueocean-test-user-CognitoAuthenticatedUserRole
+#        AssumeRolePolicyDocument:
+#          Statement:
+#          - Effect: Allow
+#            Principal:
+#              Federated: 'cognito-identity.amazonaws.com'
+#            Action: 'sts:AssumeRoleWithWebIdentity'
+#            Condition:
+#              StringEquals:
+#                cognito-identity.amazonaws.com:aud:
+#                  Ref: CognitoIdentityPool
+#              ForAnyValue:StringLike:
+#                cognito-identity.amazonaws.com:amr: 'authenticated'
+#        Policies:
+#        - PolicyName: blueocean-test-user-CognitoAuthenticatedUserRolePolicy
+#          PolicyDocument:
+#            Statement:
+#            - Effect: 'Allow'
+#              Action:
+#              - 'mobileanalytics:PutEvents'
+#              - 'cognito-sync:*'
+#              - 'cognito-identity:*'
+#              Resource:
+#              - '*'
+#
+#    # The role unauthenticated cognito users have when interacting with AWS resources.
+#    CognitoUnauthenticatedUserRole:
+#      Type: AWS::IAM::Role
+#      DependsOn:
+#      - CognitoIdentityPool
+#      Properties:
+#        RoleName: blueocean-test-user-CognitoUnauthenticatedUserRole
+#        AssumeRolePolicyDocument:
+#          Version: '2012-10-17'
+#          Statement:
+#          - Effect: Allow
+#            Principal:
+#              Federated: 'cognito-identity.amazonaws.com'
+#            Action: 'sts:AssumeRoleWithWebIdentity'
+#            Condition:
+#              StringEquals:
+#                cognito-identity.amazonaws.com:aud:
+#                  Ref: CognitoIdentityPool
+#              ForAnyValue:StringLike:
+#                cognito-identity.amazonaws.com:amr: 'unauthenticated'
+#        Policies:
+#        - PolicyName: blueocean-test-user-CognitoUnauthenticatedUserRolePolicy
+#          PolicyDocument:
+#            Version: '2012-10-17'
+#            Statement:
+#            - Effect: 'Allow'
+#              Action:
+#              - 'mobileanalytics:PutEvents'
+#              - 'cognito-sync:*'
+#              'Resource':
+#              - '*'
+#
+#    # The mapping of iam roles to cognito.
+#    CognitoIdentityPoolAuthenticatedRoleMap:
+#      Type: AWS::Cognito::IdentityPoolRoleAttachment
+#      DependsOn:
+#      - CognitoIdentityPool
+#      - CognitoAuthenticatedUserRole
+#      - CognitoUnauthenticatedUserRole
+#      Properties:
+#        IdentityPoolId:
+#          Ref: CognitoIdentityPool
+#        # Cloud formation has no way for us to populate the role mappings dynamically.
+#        # We also cannot seem to set the value via lambda without errors like
+#        # "Requested update required the provider to create a new physical resource".
+#        # This part must be done manually until AWS supports setting the value properly.
+#        ##RoleMappings:
+#        ##  Fn::GetAtt: CustomCognitoIdentityTranformRoleHandler.RoleMapping
+#        Roles:
+#          authenticated:
+#            Fn::GetAtt: CognitoAuthenticatedUserRole.Arn
+#          unauthenticated:
+#            Fn::GetAtt: CognitoUnauthenticatedUserRole.Arn
+#
+#    # =============================================================================================
+#    # Cognito: blueocean-local-user-pool
+#    # =============================================================================================
+#    # The role used by cognito to send sms messages.
+#    CognitoSmsSendIamRole01:
+#      Type: AWS::IAM::Role
+#      Properties:
+#        RoleName: blueocean-local-user-CognitoSmsSendIamRole
+#        AssumeRolePolicyDocument:
+#          Version: '2012-10-17'
+#          Statement:
+#          - Sid: ''
+#            Effect: 'Allow'
+#            Principal:
+#              Service: 'cognito-idp.amazonaws.com'
+#            Action: 'sts:AssumeRole'
+#            Condition:
+#              StringEquals:
+#                sts:ExternalId: 0a3ac948-0400-4a23-a43d-d2dbf5952310 # Random ID used to link cognito with SMS sending
+#        Policies:
+#        - PolicyName: blueocean-local-user-CognitoSmsSendPolicy
+#          PolicyDocument:
+#            Version: '2012-10-17'
+#            Statement:
+#            - Effect: 'Allow'
+#              Action:
+#              - 'sns:publish'
+#              Resource:
+#              - '*'
+#    
+#    # The cognito user pool used for all app authentication
+#    CognitoUserPool01:
+#      Type: AWS::Cognito::UserPool
+#      DependsOn:
+#      - CognitoSmsSendIamRole01
+#      Properties:
+#        AdminCreateUserConfig:
+#          AllowAdminCreateUserOnly: false
+#        AliasAttributes:
+#        - email
+#        AutoVerifiedAttributes:
+#        - email
+#        DeviceConfiguration:
+#          ChallengeRequiredOnNewDevice: true
+#        #LambdaConfig:
+#        #  PreAuthentication:
+#        #    Fn::GetAtt: CognitoTriggerPreAuthHandlerLambdaFunction.Arn
+#        #  PostAuthentication:
+#        #    Fn::GetAtt: CognitoTriggerPostAuthHandlerLambdaFunction.Arn
+#        #  DefineAuthChallenge:
+#        #    Fn::GetAtt: CognitoTriggerAuthChallengeDefineHandlerLambdaFunction.Arn
+#        #  CreateAuthChallenge:
+#        #    Fn::GetAtt: CognitoTriggerAuthChallengeCreateHandlerLambdaFunction.Arn
+#        #  VerifyAuthChallengeResponse:
+#        #    Fn::GetAtt: CognitoTriggerAuthChallengeVerifyHandlerLambdaFunction.Arn
+#        #  PreSignUp:
+#        #    Fn::GetAtt: CognitoTriggerPreSignupHandlerLambdaFunction.Arn
+#        EmailConfiguration:
+#          ReplyToEmailAddress: noreply@app.blueocean.com
+#        MfaConfiguration: OPTIONAL
+#        Policies:
+#          PasswordPolicy:
+#            MinimumLength: 8
+#            RequireLowercase: true
+#            RequireNumbers: true
+#            RequireSymbols: true
+#            RequireUppercase: true
+#        UserPoolName: blueocean-local-user-pool
+#        # DO NOT ADD/MODIFY ANY OF THESE SCHEMA ATTRIBUTES!!!!!
+#        # Changing any of these attributes results in the entire use pool and all data being
+#        # removed and a new user pool being created. There isn't really a reliable solution to
+#        # the problem. So we keep the necessary user data on our server and have the login page
+#        # transparently login/register just in case the user pool is wiped out.
+#        # BE SUPER CAREFUL!!!!
+#        Schema:
+#        - Name: email
+#          Required: true
+#        - AttributeDataType: String
+#          Mutable: true
+#          Name: metaData
+#          StringAttributeConstraints:
+#            MaxLength: 2048
+#            MinLength: 0
+#          Required: false
+#        - AttributeDataType: String
+#          Mutable: true
+#          Name: firstName
+#          StringAttributeConstraints:
+#            MaxLength: 64
+#            MinLength: 1
+#        - AttributeDataType: String
+#          Mutable: true
+#          Name: lastName
+#          StringAttributeConstraints:
+#            MaxLength: 64
+#            MinLength: 1
+#        - AttributeDataType: String
+#          Mutable: true
+#          Name: username
+#          StringAttributeConstraints:
+#            MaxLength: 256
+#            MinLength: 1
+#        SmsConfiguration:
+#          ExternalId: 0a3ac948-0400-4a23-a43d-d2dbf5952310 # Random ID used to link cognito with SMS sending
+#          SnsCallerArn:
+#            Fn::GetAtt: CognitoSmsSendIamRole01.Arn
+#    
+#    # The IAM role that cognito users who are in the app admin group have access to.
+#    CognitoAppAdminRole01:
+#      Type: AWS::IAM::Role
+#      Properties:
+#        RoleName: blueocean-local-user-CognitoAppAdminRole
+#        AssumeRolePolicyDocument:
+#          Version: '2012-10-17'
+#          Statement:
+#          - Effect: Allow
+#            Principal:
+#              Federated: 'cognito-identity.amazonaws.com'
+#            Action: 'sts:AssumeRoleWithWebIdentity'
+#            Condition:
+#              StringEquals:
+#                cognito-identity.amazonaws.com:aud:
+#                  Ref: CognitoIdentityPool01
+#              ForAnyValue:StringLike:
+#                cognito-identity.amazonaws.com:amr: 'authenticated'
+#        #Policies:
+#        #- PolicyName: blueocean-local-user-CognitoAppAdminRolePolicy
+#        #  PolicyDocument:
+#        #    Version: '2012-10-17'
+#        #    Statement:
+#        #    - Effect: Allow
+#        #      Action:
+#        #      - 's3:PutObject'
+#        #      - 's3:GetObject'
+#        #      Resource:
+#        #      - ${self:custom.s3DataBucketArn}/ml-data/*
+#        #      - ${self:custom.s3DataBucketArn}/public/*
+#
+#    # A user group that identifies the app admins for the app. It also has specific permissions to
+#    # other AWS resources.
+#    CognitoAppAdminUserGroup01:
+#      Type: AWS::Cognito::UserPoolGroup
+#      DependsOn:
+#      - CognitoAppAdminRole01
+#      Properties:
+#        GroupName: AppAdmin
+#        Precedence: 0
+#        UserPoolId:
+#          Ref: CognitoUserPool01
+#        RoleArn:
+#          Fn::GetAtt: CognitoAppAdminRole01.Arn
+#
+#    # The client app that uses our user pool.
+#    CognitoUserPoolClient01:
+#      Type: AWS::Cognito::UserPoolClient
+#      Properties:
+#        ClientName: "blueocean App"
+#        GenerateSecret: false
+#        RefreshTokenValidity: 30
+#        UserPoolId:
+#          Ref: CognitoUserPool01
+#        ReadAttributes:
+#        - email
+#        - "custom:metaData"
+#        - "custom:firstName"
+#        - "custom:lastName"
+#        - "custom:username"
+#        WriteAttributes:
+#        - email
+#        - "custom:metaData"
+#        - "custom:firstName"
+#        - "custom:lastName"
+#        - "custom:username"
+#        
+#    # The identity pool AWS uses to work with Cognito. Without this, cognito user
+#    # policies will not be mapped to IAM and thus no access will be given to cognito users.
+#    CognitoIdentityPool01:
+#      Type: AWS::Cognito::IdentityPool
+#      DependsOn:
+#      - CognitoUserPoolClient01
+#      - CognitoUserPool01
+#      Properties:
+#        IdentityPoolName: blueoceanlocaluserIdentityPool
+#        AllowUnauthenticatedIdentities: true
+#        CognitoIdentityProviders:
+#        - ClientId:
+#            Ref: CognitoUserPoolClient01
+#          ProviderName:
+#            Fn::GetAtt:
+#            - CognitoUserPool01
+#            - ProviderName
+#
+#    # The role authenticated cognito users have when interacting with AWS resources.
+#    CognitoAuthenticatedUserRole01:
+#      Type: AWS::IAM::Role
+#      DependsOn:
+#      - CognitoIdentityPool01
+#      Properties:
+#        RoleName: blueocean-local-CognitoAuthenticatedUserRole
+#        AssumeRolePolicyDocument:
+#          Statement:
+#          - Effect: Allow
+#            Principal:
+#              Federated: 'cognito-identity.amazonaws.com'
+#            Action: 'sts:AssumeRoleWithWebIdentity'
+#            Condition:
+#              StringEquals:
+#                cognito-identity.amazonaws.com:aud:
+#                  Ref: CognitoIdentityPool01
+#              ForAnyValue:StringLike:
+#                cognito-identity.amazonaws.com:amr: 'authenticated'
+#        Policies:
+#        - PolicyName: blueocean-local-user-CognitoAuthenticatedUserRolePolicy
+#          PolicyDocument:
+#            Statement:
+#            - Effect: 'Allow'
+#              Action:
+#              - 'mobileanalytics:PutEvents'
+#              - 'cognito-sync:*'
+#              - 'cognito-identity:*'
+#              Resource:
+#              - '*'
+#
+#    # The role unauthenticated cognito users have when interacting with AWS resources.
+#    CognitoUnauthenticatedUserRole01:
+#      Type: AWS::IAM::Role
+#      DependsOn:
+#      - CognitoIdentityPool01
+#      Properties:
+#        RoleName: blueocean-local-user-CognitoUnauthenticatedUserRole
+#        AssumeRolePolicyDocument:
+#          Version: '2012-10-17'
+#          Statement:
+#          - Effect: Allow
+#            Principal:
+#              Federated: 'cognito-identity.amazonaws.com'
+#            Action: 'sts:AssumeRoleWithWebIdentity'
+#            Condition:
+#              StringEquals:
+#                cognito-identity.amazonaws.com:aud:
+#                  Ref: CognitoIdentityPool01
+#              ForAnyValue:StringLike:
+#                cognito-identity.amazonaws.com:amr: 'unauthenticated'
+#        Policies:
+#        - PolicyName: blueocean-local-user-CognitoUnauthenticatedUserRolePolicy
+#          PolicyDocument:
+#            Version: '2012-10-17'
+#            Statement:
+#            - Effect: 'Allow'
+#              Action:
+#              - 'mobileanalytics:PutEvents'
+#              - 'cognito-sync:*'
+#              'Resource':
+#              - '*'
+#
+#    # The mapping of iam roles to cognito.
+#    CognitoIdentityPoolAuthenticatedRoleMap01:
+#      Type: AWS::Cognito::IdentityPoolRoleAttachment
+#      DependsOn:
+#      - CognitoIdentityPool01
+#      - CognitoAuthenticatedUserRole01
+#      - CognitoUnauthenticatedUserRole01
+#      Properties:
+#        IdentityPoolId:
+#          Ref: CognitoIdentityPool01
+#        # Cloud formation has no way for us to populate the role mappings dynamically.
+#        # We also cannot seem to set the value via lambda without errors like
+#        # "Requested update required the provider to create a new physical resource".
+#        # This part must be done manually until AWS supports setting the value properly.
+#        ## RoleMappings:
+#        ##   Fn::GetAtt: CustomCognitoIdentityTranformRoleHandler.RoleMapping
+#        Roles:
+#          authenticated:
+#            Fn::GetAtt: CognitoAuthenticatedUserRole01.Arn
+#          unauthenticated:
+#            Fn::GetAtt: CognitoUnauthenticatedUserRole01.Arn
+
+
+    # =============================================================================================
+    # AWS::DynamoDB::Table
+    # =============================================================================================
+    # NOTE: we cannot add attributes to an existing DynamoDB table - not supported!!! 
+    #       Can only update ProvisionedThroughput, StreamSpecification, and GlobalSecondaryIndexes
+    #
+    # An error occurred: DynamoDBStreamExampleTable - 
+    # CloudFormation cannot update a stack when a custom-named resource requires replacing. 
+    # Rename DynamoDBStreamExampleTable and update the stack again.
+    #
+    # NOTE: Cannot perform more than one GSI creation or deletion in a single update.
+    #       Can create 2+ GSI at first creation???
+    #
+    # NOTE: One or more parameter values were invalid: Table KeySchema does not have a range key, 
+    #       which is required when specifying a LocalSecondaryIndex.
+    #       Service: AmazonDynamoDBv2; Status Code: 400; Error Code: ValidationException; Request ID:
+    # 
+    # DynamoDBStreamExampleTable:
+    #   Type: AWS::DynamoDB::Table
+    #   Properties:
+    #     TableName: blueocean-${opt:stage}-DynamoDBStreamExampleTable
+    #     AttributeDefinitions:
+    #       - AttributeName: id
+    #         AttributeType: S
+    #       - AttributeName: age                 
+    #         AttributeType: N       
+    #       - AttributeName: name           # V2
+    #         AttributeType: S              # V2                 
+    #     KeySchema:
+    #       - AttributeName: id
+    #         KeyType: HASH
+    #       - AttributeName: age
+    #         KeyType: RANGE
+    #     GlobalSecondaryIndexes:           # V2
+    #       - IndexName: ind_name           # V2
+    #         KeySchema:                    # V2
+    #           - AttributeName: name       # V2
+    #             KeyType: HASH             # V2 
+    #         ProvisionedThroughput:        # V2
+    #           ReadCapacityUnits: 1        # V2
+    #           WriteCapacityUnits: 1       # V2 
+    #         Projection:                   # V2
+    #           ProjectionType: ALL         # V2    
+    #       - IndexName: ind_age                 # V3
+    #         KeySchema:                         # V3
+    #           - AttributeName: age             # V3
+    #             KeyType: HASH                  # V3 
+    #         ProvisionedThroughput:             # V3
+    #           ReadCapacityUnits: 1             # V3
+    #           WriteCapacityUnits: 1            # V3 
+    #         Projection:                        # V3
+    #           ProjectionType: ALL              # V3        
+    #     LocalSecondaryIndexes:            # V2
+    #       - IndexName: ind_id_name        # V2
+    #         KeySchema:                    # V2
+    #           - AttributeName: id         # V2
+    #             KeyType: HASH             # V2 
+    #           - AttributeName: name       # V2
+    #             KeyType: RANGE            # V2 
+    #         Projection:                   # V2
+    #           ProjectionType: ALL         # V2
+    #     ProvisionedThroughput:     
+    #       ReadCapacityUnits: 2
+    #       WriteCapacityUnits: 2
+    #     StreamSpecification:
+    #       StreamViewType: NEW_IMAGE    
+          # This will result in: Stream enabled = Yes, View type = New image                        
+    
+    # =============================================================================================
+    # AWS::IAM::Role for lambda function
+    # =============================================================================================
+#     DynamoDBStreamExampleHandlerRole:
+#       Type: AWS::IAM::Role
+#       DependsOn:
+#       - DynamoDBStreamExampleTable
+#       - DynamoDBStreamExampleHandlerLogGroup
+#       Properties:
+#         RoleName: blueocean-${opt:stage}-DynamoDBStreamExampleHandlerRole
+#         AssumeRolePolicyDocument:
+#           Version: '2012-10-17'
+#           Statement:
+#           - Effect: 'Allow'
+#             Principal:
+#               Service: 'lambda.amazonaws.com'
+#             Action: 'sts:AssumeRole'
+#         Policies:
+#         - PolicyName: blueocean-${opt:stage}-DynamoDBStreamExampleHandlerRolePolicy
+#           PolicyDocument:
+#             Version: '2012-10-17'
+#             Statement:
+#             - Effect: 'Allow'
+#               Action:
+#               - 'ses:SendRawEmail'
+#               Resource: '*'
+#               Condition:
+#                 ForAllValues:StringLike:
+#                   ses:Recipients: ${self:custom.appStageConfig.emailAllowedRecipients}
+#             - Effect: 'Allow'
+#               Action: 'ses:GetSendQuota'
+#               Resource: '*'
+#             - Effect: 'Allow'
+#               Action:
+#               - 'logs:CreateLogGroup'
+#               - 'logs:PutLogEvents'
+#               Resource:
+#               - Fn::GetAtt: DynamoDBStreamExampleHandlerLogGroup.Arn
+#             - Effect: 'Allow'
+#               Action: 'logs:DescribeLogStreams'
+#               Resource:
+#               - 'arn:aws:logs:${self:custom.appStageConfig.awsRegion}:${self:custom.accountId}:log-group:${self:custom.appStageConfig.eventMonitorLogGroup}:log-stream:'
+#             - Effect: 'Allow'
+#               Action:
+#               - 'logs:PutLogEvents'
+#               Resource:
+#               - arn:aws:logs:${self:custom.appStageConfig.awsRegion}:${self:custom.accountId}:log-group:${self:custom.appStageConfig.eventMonitorLogGroup}:log-stream:${self:custom.appStageConfig.eventMonitorTraceStream}
+#               - arn:aws:logs:${self:custom.appStageConfig.awsRegion}:${self:custom.accountId}:log-group:${self:custom.appStageConfig.eventMonitorLogGroup}:log-stream:${self:custom.appStageConfig.eventMonitorErrorStream}
+#             - Effect: 'Allow'
+#               Action:
+#               - 'dynamodb:Query'
+#               Resource:
+#               - Fn::Join:
+#                 - ''
+#                 - - Fn::GetAtt: DynamoDBStreamExampleTable.Arn
+#                   - '/index/'
+#                   - 'ind_name'
+#             - Effect: 'Allow'
+#               Action:
+#               - 'dynamodb:PutItem'
+#               - 'dynamodb:GetItem'              
+#               - 'dynamodb:GetRecords'
+#               - 'dynamodb:GetShardIterator'
+#               - 'dynamodb:DescribeStream'
+#               - 'dynamodb:ListStreams'
+#               Resource:
+#               - Fn::GetAtt: DynamoDBStreamExampleTable.Arn
+#               - Fn::GetAtt: DynamoDBStreamExampleTable.StreamArn
+#             - Effect: 'Allow'
+#               Action:
+#               - 's3:ListBucket'
+#               Resource: #${self:custom.s3DataBucketArn}/public/organization-images
+#               - Fn::Join:
+#                 - ''
+#                 - - 'arn:aws:s3:::blueocean-pbix-repo' #Fn::GetAtt: S3PbixRepoBucket.Arn
+#                   - '/prod'
+#         ManagedPolicyArns:
+#         - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+
+# functions:
+  # =============================================================================================
+  # Lambda
+  # =============================================================================================
+  # Lambda function name will become "SERVICE_NAME-stage-FUNCTION_NAME": 
+  #
+  # Validation error detected: Value 'XiangTestService01-test-DynamoDBStreamExampleHandler' 
+  #     at 'functionName' failed to satisfy constraint: Member must have length less than or equal to 64 
+  #
+  # API Gateway - API name becomes "stage-FUNCTION_NAME": 
+  #     dev-DynamoDBStreamExampleHandler
+  #
+  # stream type=dynamodb: sets up DynamoDB stream - table update event.
+#   DynamoDBStreamExampleHandler:
+#     DependsOn: 
+#     - DynamoDBStreamExampleTable
+#     - VPCSecurityGroup
+#     - LambdaSubnetA
+#     - LambdaSubnetB
+#     - LambdaSubnetC
+#     handler: DynamoDBStreamExampleHandler.DynamoDBStreamExampleHandler
+#     memorySize: 1024
+#     timeout: 300
+#     role: DynamoDBStreamExampleHandlerRole
+#     vpc:
+#       securityGroupIds:
+#       - Fn::GetAtt: VPCSecurityGroup.GroupId
+#       subnetIds:
+#       - Ref: LambdaSubnetA
+#       - Ref: LambdaSubnetB
+#       - Ref: LambdaSubnetC
+#     environment:
+#       awsRegion: ${self:custom.appStageConfig.awsRegion}
+#       stage: ${opt:stage}
+#     #package:
+#     #  artifact: dist/DynamoDBStreamExampleHandler.zip
+#     #  include:
+#     #  - dist/DynamoDBStreamExampleHandler.js
+#     #  - dist/DynamoDBStreamExampleHandler.js.map
+#     events:
+#       - http:
+#           path: DynamoDBStreamExampleHandler
+#           method: get
+#       - stream:
+#           type: dynamodb
+#           arn:
+#             Fn::GetAtt:
+#               - DynamoDBStreamExampleTable
+#               - StreamArn
+#           batchSize: 1
+
+# plugins:
+#   - serverless-plugin-typescript
+#   - serverless-offline
+

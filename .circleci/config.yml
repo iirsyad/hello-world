@@ -238,8 +238,8 @@ jobs:
 workflows:
   main:
     jobs:
-      # - build-and-test:
-      #     stage: blue
-
-      - deploy_to_target:
+      - build-and-test:
           stage: blue
+
+      # - deploy_to_target:
+      #     stage: blue

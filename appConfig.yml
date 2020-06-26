@@ -1,0 +1,51 @@
+stage:
+  master:
+    # both code config
+    stage: 'master'
+    awsRegion: 'us-west-2'
+
+    vpcCidr: '10.1.0.0/16'
+    lambdaSubnetACidr: '10.1.1.0/24'
+    lambdaSubnetBCidr: '10.1.2.0/24'
+    lambdaSubnetCCidr: '10.1.3.0/24'
+    publicSubnetACidr: '10.1.4.0/24'
+    publicSubnetBCidr: '10.1.5.0/24'
+    publicSubnetCCidr: '10.1.6.0/24'
+
+
+
+  stage:
+  #   stage: 'stage'
+  #   awsRegion: 'us-west-2'
+
+  #   vpcCidr: '10.2.0.0/16'
+  #   lambdaSubnetACidr: '10.2.1.0/24'
+  #   lambdaSubnetBCidr: '10.2.2.0/24'
+  #   lambdaSubnetCCidr: '10.2.3.0/24'
+  #   publicSubnetACidr: '10.2.4.0/24'
+  #   publicSubnetBCidr: '10.2.5.0/24'
+  #   publicSubnetCCidr: '10.2.6.0/24'
+
+  # blue:
+  #   stage: 'blue'
+  #   awsRegion: 'us-west-2'
+
+  #   vpcCidr: '10.3.0.0/16'
+  #   lambdaSubnetACidr: '10.3.1.0/24'
+  #   lambdaSubnetBCidr: '10.3.2.0/24'
+  #   lambdaSubnetCCidr: '10.3.3.0/24'
+  #   publicSubnetACidr: '10.3.4.0/24'
+  #   publicSubnetBCidr: '10.3.5.0/24'
+  #   publicSubnetCCidr: '10.3.6.0/24'
+
+  green:
+    stage: 'green'
+    awsRegion: 'us-west-2'
+
+    vpcCidr: '10.4.0.0/16'
+    lambdaSubnetACidr: '10.4.1.0/24'
+    lambdaSubnetBCidr: '10.4.2.0/24'
+    lambdaSubnetCCidr: '10.4.3.0/24'
+    publicSubnetACidr: '10.4.4.0/24'
+    publicSubnetBCidr: '10.4.5.0/24'
+    publicSubnetCCidr: '10.4.6.0/24'
