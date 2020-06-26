@@ -93,7 +93,7 @@ jobs:
 
       serverName:
         type: string
-        default: blueocean-dev-db-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com
+        default: blueocean-stage2-db-cluster.cluster-ro-ceqlr067xbev.us-west-2.rds.amazonaws.com
 
       dbName:
         type: string
@@ -101,7 +101,9 @@ jobs:
 
       sgId:
         type: string
-        default: sg-04ee700a973f11ef4
+        default: sg-0e8a574bd3192e40a
+        # default: sg-04ee700a973f11ef4
+
 
     # executor: python/default
     docker:
@@ -238,8 +240,12 @@ jobs:
 workflows:
   main:
     jobs:
-      - build-and-test:
-          stage: blue
-
-      # - deploy_to_target:
+      # - build-and-test:
       #     stage: blue
+
+      - deploy_to_target:
+          stage: green
+          serverName: blueocean-green3-db-cluster.cluster-ceqlr067xbev.us-west-2.rds.amazonaws.com
+          dbName: aidentitygreen
+          sgId: sg-0253039794e454f88
+
