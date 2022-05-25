@@ -6,6 +6,6 @@ ibm-watson==3.0.3
 mysql-connector-python==8.0.16
 tldextract==2.2.1
 jwt
-PyJWT==1.7.1
+PyJWT==2.4.0
 boto3
 
